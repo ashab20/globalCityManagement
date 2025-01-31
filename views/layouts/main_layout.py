@@ -46,13 +46,13 @@ class MainLayout(ttk.Frame):
             width=12
         ).pack(side="left", padx=2)
         
-        ttk.Button(
-            user_frame,
-            text="Create Role",
-            command=self.show_create_role,
-            bootstyle="primary-outline",
-            width=12
-        ).pack(side="left", padx=2)
+        # ttk.Button(
+        #     user_frame,
+        #     text="Create Role",
+        #     command=self.show_create_role,
+        #     bootstyle="primary-outline",
+        #     width=12
+        # ).pack(side="left", padx=2)
         
         # Shop Management
         shop_frame = ttk.Frame(menu_bar, bootstyle="primary")

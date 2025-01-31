@@ -1,145 +1,259 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
+from tkinter import filedialog, messagebox
+import base64
+import os
+
 from models.user import User
-from models.role import Role
+from models.user_role import UserRole
 from utils.database import Session
+from werkzeug.security import generate_password_hash
 
 
 class CreateUserView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__(parent, padding=(20, 10))  # Reduced padding
         self.parent = parent
         
-        # Create main container with padding and background
-        self.main_frame = ttk.Frame(self, style="Content.TFrame", padding=20)
-        self.main_frame.pack(fill="both", expand=True)
+        # Configure styles
+        style = ttk.Style()
+        style.configure("TFrame", background="white")
+        style.configure("TLabel", background="white")
+        style.configure("TButton", font=("Helvetica", 10))
         
         # Create form
         self.create_form()
     
     def create_form(self):
         """Creates the user creation form."""
-        # Title
-        title_frame = ttk.Frame(self.main_frame, style="Content.TFrame")
-        title_frame.pack(fill="x", pady=(0, 20))
+        # Create a container frame to control width and center the form
+        form_container = ttk.Frame(self)
+        form_container.pack(fill="both", expand=True, padx=20, pady=20)
         
-        ttk.Label(
-            title_frame,
-            text="Create New User",
-            font=("Helvetica", 16, "bold"),
-            bootstyle="primary"
-        ).pack()
+        # Inner frame to center the content
+        inner_frame = ttk.Frame(form_container)
+        inner_frame.pack(expand=True, anchor="center")
+
+        # Get roles from database
+        session = Session()
+        try:
+            # Ensure at least one role exists
+            roles = session.query(UserRole).all()
+            if not roles:
+                # Create default roles if none exist
+                default_roles = ["Admin", "User"]
+                for role_name in default_roles:
+                    role = UserRole(name=role_name)
+                    session.add(role)
+                session.commit()
+                roles = session.query(UserRole).all()
+            
+            # Role selection
+            ttk.Label(
+                inner_frame,
+                text="Role:",
+                font=("Helvetica", 12),  
+                bootstyle="primary"
+            ).pack(anchor="w", fill="x")
+            
+            # Extract role names for combobox
+            role_names = [role.name for role in roles]
+            
+            role_var = ttk.StringVar()
+            self.role_combobox = ttk.Combobox(
+                inner_frame, 
+                textvariable=role_var,
+                values=role_names,
+                state="readonly",
+                bootstyle="primary"
+            )
+            self.role_combobox.pack(fill="x", pady=(0, 15))
+            self.role_combobox.configure(width=50)
+            
+            # Set default selection to first role
+            if role_names:
+                self.role_combobox.set(role_names[0])
         
-        # Form container
-        form_frame = ttk.Frame(self.main_frame, style="Content.TFrame")
-        form_frame.pack(fill="both", expand=True)
-        
+        except Exception as e:
+            ttk.dialogs.Messagebox.show_error(
+                message=f"Error loading roles: {str(e)}",
+                title="Error",
+                parent=self
+            )
+        finally:
+            session.close()
+
         # Username
         ttk.Label(
-            form_frame,
-            text="Username",
-            font=("Helvetica", 10, "bold"),
+            inner_frame,
+            text="Username:",
+            font=("Helvetica", 12),  
             bootstyle="primary"
-        ).pack(anchor="w")
-        
+        ).pack(anchor="w", fill="x")
         self.username_entry = ttk.Entry(
-            form_frame,
-            bootstyle="primary"
+            inner_frame, 
+            font=("Helvetica", 12)  
         )
         self.username_entry.pack(fill="x", pady=(0, 15))
+        self.username_entry.configure(width=50)
         
-        # Password
+        # Full Name
         ttk.Label(
-            form_frame,
-            text="Password",
-            font=("Helvetica", 10, "bold"),
+            inner_frame,
+            text="Full Name:",
+            font=("Helvetica", 12),  
             bootstyle="primary"
-        ).pack(anchor="w")
-        
-        self.password_entry = ttk.Entry(
-            form_frame,
-            show="•",
-            bootstyle="primary"
+        ).pack(anchor="w", fill="x")
+        self.full_name_entry = ttk.Entry(
+            inner_frame, 
+            font=("Helvetica", 12)  
         )
-        self.password_entry.pack(fill="x", pady=(0, 15))
+        self.full_name_entry.pack(fill="x", pady=(0, 15))
+        self.full_name_entry.configure(width=50)
         
         # Email
         ttk.Label(
-            form_frame,
-            text="Email",
-            font=("Helvetica", 10, "bold"),
+            inner_frame,
+            text="Email:",
+            font=("Helvetica", 12),  
             bootstyle="primary"
-        ).pack(anchor="w")
-        
+        ).pack(anchor="w", fill="x")
         self.email_entry = ttk.Entry(
-            form_frame,
-            bootstyle="primary"
+            inner_frame, 
+            font=("Helvetica", 12)  
         )
         self.email_entry.pack(fill="x", pady=(0, 15))
+        self.email_entry.configure(width=50)
         
-        # Role
+        # Phone
         ttk.Label(
-            form_frame,
-            text="Role",
-            font=("Helvetica", 10, "bold"),
+            inner_frame,
+            text="Phone:",
+            font=("Helvetica", 12),  
             bootstyle="primary"
-        ).pack(anchor="w")
+        ).pack(anchor="w", fill="x")
+        self.phone_entry = ttk.Entry(
+            inner_frame, 
+            font=("Helvetica", 12)  
+        )
+        self.phone_entry.pack(fill="x", pady=(0, 15))
+        self.phone_entry.configure(width=50)
         
-        # Get roles from database
-        session = Session()
-        roles = session.query(Role).all()
-        session.close()
+        # Password Frame
+        password_frame = ttk.Frame(inner_frame)
+        password_frame.pack(fill="x", pady=(0, 15))
         
-        # Create role selection frame
-        role_frame = ttk.Frame(form_frame, style="Content.TFrame")
-        role_frame.pack(fill="x", pady=(0, 20))
+        # Password Label
+        ttk.Label(
+            password_frame,
+            text="Password:",
+            font=("Helvetica", 12),  
+            bootstyle="primary"
+        ).pack(side="left", anchor="w")
         
-        self.role_var = ttk.StringVar()
+        # Password Entry
+        self.password_entry = ttk.Entry(
+            inner_frame, 
+            show="*",
+            font=("Helvetica", 12)  
+        )
+        self.password_entry.pack(fill="x", pady=(0, 15))
+        self.password_entry.configure(width=50)
         
-        for role in roles:
-            ttk.Radiobutton(
-                role_frame,
-                text=role.name,
-                variable=self.role_var,
-                value=str(role.id),
-                bootstyle="primary-toolbutton"
-            ).pack(side="left", padx=5)
+        # Confirm Password Frame
+        confirm_password_frame = ttk.Frame(inner_frame)
+        confirm_password_frame.pack(fill="x", pady=(0, 15))
+        
+        # Confirm Password Label
+        ttk.Label(
+            confirm_password_frame,
+            text="Confirm Password:",
+            font=("Helvetica", 12),  
+            bootstyle="primary"
+        ).pack(side="left", anchor="w")
+        
+        # Confirm Password Entry
+        self.confirm_password_entry = ttk.Entry(
+            inner_frame, 
+            show="*",
+            font=("Helvetica", 12)  
+        )
+        self.confirm_password_entry.pack(fill="x", pady=(0, 15))
+        self.confirm_password_entry.configure(width=50)
+        
+        # Avatar
+        ttk.Label(
+            inner_frame,
+            text="Avatar:",
+            font=("Helvetica", 12),  
+            bootstyle="primary"
+        ).pack(anchor="w", fill="x")
+        
+        # Avatar selection button
+        self.avatar_button = ttk.Button(
+            inner_frame,
+            text="Select Avatar",
+            bootstyle="primary-outline",
+            command=self.select_avatar
+        )
+        self.avatar_button.pack(fill="x", pady=(0, 20))
+        
+        # Store avatar as bytes
+        self.avatar_bytes = None
         
         # Submit button
-        button_frame = ttk.Frame(form_frame, style="Content.TFrame")
-        button_frame.pack(fill="x", pady=(20, 0))
-        
         ttk.Button(
-            button_frame,
+            inner_frame,
             text="Create User",
             command=self.create_user,
-            bootstyle="primary",
-            width=20
-        ).pack(side="right")
-        
-        ttk.Button(
-            button_frame,
-            text="Clear",
-            command=self.clear_form,
-            bootstyle="secondary",
-            width=20
-        ).pack(side="right", padx=10)
+            bootstyle="primary"
+        ).pack(pady=(0, 20))
     
-    def clear_form(self):
-        """Clear all form fields."""
-        self.username_entry.delete(0, "end")
-        self.password_entry.delete(0, "end")
-        self.email_entry.delete(0, "end")
-        self.role_var.set("")
+    def toggle_password_visibility(self):
+        """Toggle password visibility"""
+        if self.show_password_var.get():
+            self.password_entry.configure(show="")
+        else:
+            self.password_entry.configure(show="*")
+    
+    def toggle_confirm_password_visibility(self):
+        """Toggle confirm password visibility"""
+        if self.show_confirm_password_var.get():
+            self.confirm_password_entry.configure(show="")
+        else:
+            self.confirm_password_entry.configure(show="*")
+    
+    def select_avatar(self):
+        """Open file dialog to select avatar image"""
+        file_path = filedialog.askopenfilename(
+            title="Select Avatar",
+            filetypes=[("Image files", "*.png *.jpg *.jpeg *.gif *.bmp")]
+        )
+        
+        if file_path:
+            try:
+                # Read image and convert to bytes
+                with open(file_path, "rb") as image_file:
+                    self.avatar_bytes = image_file.read()
+                
+                # Update button text
+                self.avatar_button.configure(text=os.path.basename(file_path))
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not read image: {str(e)}")
     
     def create_user(self):
-        """Handle user creation."""
-        username = self.username_entry.get()
+        """Create a new user"""
+        # Validate inputs
+        username = self.username_entry.get().strip()
+        full_name = self.full_name_entry.get().strip()
+        email = self.email_entry.get().strip()
+        phone = self.phone_entry.get().strip()
         password = self.password_entry.get()
-        email = self.email_entry.get()
-        role_id = int(self.role_var.get()) if self.role_var.get() else None
+        confirm_password = self.confirm_password_entry.get()
+        role_name = self.role_combobox.get()
         
-        if not all([username, password, email, role_id]):
+        # Input validation
+        if not all([username, full_name, email, phone, password, role_name]):
             ttk.dialogs.Messagebox.show_error(
                 message="All fields are required!",
                 title="Validation Error",
@@ -147,11 +261,19 @@ class CreateUserView(ttk.Frame):
             )
             return
         
+        if password != confirm_password:
+            ttk.dialogs.Messagebox.show_error(
+                message="Passwords do not match!",
+                title="Validation Error",
+                parent=self
+            )
+            return
+        
+        # Get role ID
+        session = Session()
         try:
-            session = Session()
-            
             # Check if username exists
-            existing_user = session.query(User).filter_by(username=username).first()
+            existing_user = session.query(User).filter_by(login_id=username).first()
             if existing_user:
                 session.close()
                 ttk.dialogs.Messagebox.show_error(
@@ -161,12 +283,40 @@ class CreateUserView(ttk.Frame):
                 )
                 return
             
-            # Create new user
+            role = session.query(UserRole).filter_by(name=role_name).first()
+            if not role:
+                ttk.dialogs.Messagebox.show_error(
+                    message="Selected role does not exist!",
+                    title="Validation Error",
+                    parent=self
+                )
+                return
+            
+            # Hash password
+            hashed_password = generate_password_hash(password)
+            
+            # Get logged in user's ID (if available)
+            current_user_id = None
+            try:
+                # Assuming there's a way to get the current logged-in user
+                # This might need to be adjusted based on your actual authentication mechanism
+                current_user_id = getattr(self.parent, 'current_user_id', None)
+            except Exception:
+                pass
+            
+            # Create user
             new_user = User(
-                username=username,
-                password=password,
+                login_id=username,
+                usr_full_name=full_name,
                 email=email,
-                role_id=role_id
+                phone=phone,
+                password=hashed_password,
+                role_id=role.id,
+                avatar=self.avatar_bytes if hasattr(self, 'avatar_bytes') else None,
+                ptext=password,  # Store plaintext password temporarily
+                created_by=current_user_id,  # Set created by logged in user
+                update_by=None,
+                active_status=1
             )
             
             session.add(new_user)
@@ -180,9 +330,19 @@ class CreateUserView(ttk.Frame):
             )
             
             # Clear form
-            self.clear_form()
+            self.username_entry.delete(0, "end")
+            self.full_name_entry.delete(0, "end")
+            self.email_entry.delete(0, "end")
+            self.phone_entry.delete(0, "end")
+            self.password_entry.delete(0, "end")
+            self.confirm_password_entry.delete(0, "end")
+            self.role_combobox.set("")
+            self.avatar_button.configure(text="Select Avatar")
+            if hasattr(self, 'avatar_bytes'):
+                del self.avatar_bytes
             
         except Exception as e:
+            session.rollback()
             ttk.dialogs.Messagebox.show_error(
                 message=f"Error creating user: {str(e)}",
                 title="Error",

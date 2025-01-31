@@ -1,7 +1,7 @@
 from utils.database import Session, setup_database
-from models.role import Role
+from models.user_role import UserRole
 from models.user import User
-from models.shop import Shop
+from models.shop_profile import ShopProfile
 from werkzeug.security import generate_password_hash
 import random
 
@@ -20,9 +20,9 @@ def create_roles():
     created_roles = []
     try:
         for role_name in roles:
-            role = session.query(Role).filter_by(name=role_name).first()
+            role = session.query(UserRole).filter_by(name=role_name).first()
             if not role:
-                role = Role(name=role_name)
+                role = UserRole(name=role_name)
                 session.add(role)
                 session.flush()
             created_roles.append(role)
@@ -84,7 +84,7 @@ def create_users(roles):
             user = session.query(User).filter_by(email=user_data["email"]).first()
             if not user:
                 # Find role
-                role = session.query(Role).filter_by(name=user_data["role"]).first()
+                role = session.query(UserRole).filter_by(name=user_data["role"]).first()
                 if role:
                     user = User(
                         username=user_data["username"],
@@ -119,7 +119,7 @@ def create_shops(users):
     
     try:
         # Get shopkeeper users
-        shopkeeper_role = session.query(Role).filter_by(name="Shopkeeper").first()
+        shopkeeper_role = session.query(UserRole).filter_by(name="Shopkeeper").first()
         if not shopkeeper_role:
             print("Shopkeeper role not found!")
             return
@@ -132,7 +132,7 @@ def create_shops(users):
         for i, name in enumerate(shop_names):
             owner = random.choice(shopkeepers)
             floor = random.randint(1, 5)
-            shop = Shop(
+            shop = ShopProfile(
                 shopName=name,
                 floorNo=str(floor),
                 shopNo=f"{floor}0{random.randint(1, 9)}",

@@ -6,7 +6,7 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_root)
 
 from utils.database import setup_database, Session
-from models.role import Role
+from models.user_role import UserRole
 from models.user import User
 from werkzeug.security import generate_password_hash
 
@@ -14,9 +14,9 @@ def create_initial_data():
     session = Session()
     try:
         # Create admin role if it doesn't exist
-        admin_role = session.query(Role).filter_by(name="Admin").first()
+        admin_role = session.query(UserRole).filter_by(name="Admin").first()
         if not admin_role:
-            admin_role = Role(name="Admin")
+            admin_role = UserRole(name="Admin")
             session.add(admin_role)
             session.flush()  # This will assign the id to admin_role
             
@@ -33,9 +33,9 @@ def create_initial_data():
             session.add(admin_user)
         
         # Create basic user role if it doesn't exist
-        user_role = session.query(Role).filter_by(name="User").first()
+        user_role = session.query(UserRole).filter_by(name="User").first()
         if not user_role:
-            user_role = Role(name="User")
+            user_role = UserRole(name="User")
             session.add(user_role)
         
         session.commit()

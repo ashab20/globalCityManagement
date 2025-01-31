@@ -1,6 +1,6 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from models.role import Role
+from models.user_role import UserRole
 from utils.database import Session
 
 
@@ -21,12 +21,12 @@ class CreateRoleView(ttk.Frame):
     def create_form(self):
         """Creates the role creation form."""
         # Title
-        ttk.Label(
-            self,
-            text="Create New Role",
-            font=("Helvetica", 16, "bold"),
-            bootstyle="primary"
-        ).pack(pady=(0, 20))
+        # ttk.Label(
+        #     self,
+        #     text="Create New Role",
+        #     font=("Helvetica", 16, "bold"),
+        #     bootstyle="primary"
+        # ).pack(pady=(0, 20))
         
         # Role Name
         ttk.Label(
@@ -77,7 +77,7 @@ class CreateRoleView(ttk.Frame):
             session = Session()
             
             # Check if role exists
-            existing_role = session.query(Role).filter_by(name=name).first()
+            existing_role = session.query(UserRole).filter_by(name=name).first()
             if existing_role:
                 session.close()
                 ttk.dialogs.Messagebox.show_error(

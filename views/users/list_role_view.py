@@ -3,7 +3,7 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.tableview import Tableview
 from utils.database import Session
 from models.user import User
-from models.role import Role
+from models.user_role import UserRole
 
 
 class ListRoleView(ttk.Frame):
@@ -21,12 +21,12 @@ class ListRoleView(ttk.Frame):
         container.pack(expand=True)
         
         # Title
-        title_label = ttk.Label(
-            container,
-            text="Role List",
-            font=("Helvetica", 24, "bold"),
-            bootstyle="primary"
-        )
+        # title_label = ttk.Label(
+        #     container,
+        #     text="Role List",
+        #     font=("Helvetica", 24, "bold"),
+        #     bootstyle="primary"
+        # )
         title_label.pack(pady=(0, 20))
         
         # Create content frame
@@ -88,7 +88,7 @@ class ListRoleView(ttk.Frame):
             user_data = []
             
             for user in users:
-                role = session.query(Role).filter_by(id=user.role_id).first()
+                role = session.query(UserRole).filter_by(id=user.role_id).first()
                 role_name = role.name if role else "No Role"
                 
                 user_data.append((

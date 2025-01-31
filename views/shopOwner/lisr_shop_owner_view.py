@@ -1,14 +1,14 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from models.shop_profile import ShopProfile
+from models.shop_owner_profile import ShopOwnerProfile
 from utils.database import Session
 
 
-class ListShopView(ttk.Frame):
+class ListShopOwnerView(ttk.Frame):
     def __init__(self, parent):
         super().__init__(parent, padding=20)
         self.parent = parent
-        
+
         # Configure styles
         style = ttk.Style()
         style.configure("TFrame", background="white")
@@ -16,22 +16,22 @@ class ListShopView(ttk.Frame):
         style.configure("TButton", font=("Helvetica", 10))
         style.configure("Treeview", font=("Helvetica", 10))
         style.configure("Treeview.Heading", font=("Helvetica", 10, "bold"))
-        
-        # Create shop list
-        self.create_shop_list()
-    
-    def create_shop_list(self):
-        """Creates the shop list view."""
+
+        # Create shop owner list
+        self.create_owner_list()
+
+    def create_owner_list(self):
+        """Creates the shop owner list view."""
         # Title
         # ttk.Label(
         #     self,
-        #     text="Shop List",
+        #     text="Shop Owner List",
         #     font=("Helvetica", 16, "bold"),
         #     bootstyle="primary"
         # ).pack(pady=(0, 20))
-        
-        # Define columns based on `ShopProfile` model
-        columns = ("ID", "Shop Name", "Floor No", "Shop No", "Description", "Rent Amount")
+
+        # Create treeview
+        columns = ("ID", "Name", "Phone", "Email", "Address", "NID Number", "Status")
         self.tree = ttk.Treeview(
             self,
             bootstyle="primary",
@@ -39,22 +39,24 @@ class ListShopView(ttk.Frame):
             show="headings",
             height=15
         )
-        
+
         # Configure columns
         self.tree.heading("ID", text="ID")
-        self.tree.heading("Shop Name", text="Shop Name")
-        self.tree.heading("Floor No", text="Floor No")
-        self.tree.heading("Shop No", text="Shop No")
-        self.tree.heading("Description", text="Description")
-        self.tree.heading("Rent Amount", text="Rent Amount")
-        
-        self.tree.column("ID", width=50, anchor="center")
-        self.tree.column("Shop Name", width=150, anchor="w")
-        self.tree.column("Floor No", width=100, anchor="center")
-        self.tree.column("Shop No", width=100, anchor="center")
-        self.tree.column("Description", width=250, anchor="w")
-        self.tree.column("Rent Amount", width=120, anchor="center")
-        
+        self.tree.heading("Name", text="Owner Name")
+        self.tree.heading("Phone", text="Phone")
+        self.tree.heading("Email", text="Email")
+        self.tree.heading("Address", text="Address")
+        self.tree.heading("NID Number", text="NID Number")
+        self.tree.heading("Status", text="Status")
+
+        self.tree.column("ID", width=50)
+        self.tree.column("Name", width=150)
+        self.tree.column("Phone", width=120)
+        self.tree.column("Email", width=150)
+        self.tree.column("Address", width=200)
+        self.tree.column("NID Number", width=100)
+        self.tree.column("Status", width=80)
+
         # Add scrollbar
         scrollbar = ttk.Scrollbar(
             self,
@@ -63,52 +65,53 @@ class ListShopView(ttk.Frame):
             bootstyle="primary-round"
         )
         self.tree.configure(yscrollcommand=scrollbar.set)
-        
+
         # Pack widgets
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
-        
-        # Load shops
-        self.load_shops()
-        
+
+        # Load shop owners
+        self.load_shop_owners()
+
         # Add refresh button
         ttk.Button(
             self,
             text="Refresh",
-            command=self.load_shops,
+            command=self.load_shop_owners,
             bootstyle="primary-outline",
             width=20
         ).pack(pady=(10, 0))
-    
-    def load_shops(self):
-        """Load shops from database."""
+
+    def load_shop_owners(self):
+        """Load shop owners from the database."""
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-        
+
         try:
             session = Session()
-            shops = session.query(ShopProfile).all()
-            
-            for shop in shops:
+            owners = session.query(ShopOwnerProfile).all()
+
+            for owner in owners:
                 self.tree.insert(
                     "",
                     "end",
                     values=(
-                        shop.id,
-                        shop.shop_name,  # Corrected field reference
-                        shop.floor_no,   # Corrected field reference
-                        shop.shop_no,    # Corrected field reference
-                        shop.descreption,  # Corrected field reference
-                        shop.rent_amout   # Corrected field reference
+                        owner.id,
+                        owner.ownner_name,
+                        owner.phone,
+                        owner.email,
+                        owner.address,
+                        owner.nid_number,
+                        "Active" if owner.active_status == 1 else "Inactive"
                     )
                 )
-            
+
             session.close()
-            
+
         except Exception as e:
             ttk.dialogs.Messagebox.show_error(
-                message=f"Error loading shops: {str(e)}",
+                message=f"Error loading shop owners: {str(e)}",
                 title="Error",
                 parent=self
             )

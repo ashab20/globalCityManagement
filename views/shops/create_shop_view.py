@@ -1,7 +1,9 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from models.shop import Shop
+from models.shop_profile import ShopProfile
+from models.shop_owner_profile import ShopOwnerProfile  # Assuming you have this model
 from utils.database import Session
+from ttkbootstrap.dialogs import Messagebox
 
 
 class CreateShopView(ttk.Frame):
@@ -20,115 +22,113 @@ class CreateShopView(ttk.Frame):
     
     def create_form(self):
         """Creates the shop creation form."""
-        # Title
-        ttk.Label(
-            self,
-            text="Create New Shop",
-            font=("Helvetica", 16, "bold"),
-            bootstyle="primary"
-        ).pack(pady=(0, 20))
-        
+        # ttk.Label(self, text="Create New Shop", font=("Helvetica", 16, "bold"), bootstyle="primary").pack(pady=(0, 20))
+
         # Shop Name
-        ttk.Label(
-            self,
-            text="Shop Name:",
-            bootstyle="primary"
-        ).pack(anchor="w")
-        self.name_entry = ttk.Entry(self)
-        self.name_entry.pack(fill="x", pady=(0, 10))
-        
-        # Address
-        ttk.Label(
-            self,
-            text="Address:",
-            bootstyle="primary"
-        ).pack(anchor="w")
-        self.address_entry = ttk.Entry(self)
-        self.address_entry.pack(fill="x", pady=(0, 10))
-        
-        # Phone
-        ttk.Label(
-            self,
-            text="Phone:",
-            bootstyle="primary"
-        ).pack(anchor="w")
-        self.phone_entry = ttk.Entry(self)
-        self.phone_entry.pack(fill="x", pady=(0, 10))
-        
-        # Email
-        ttk.Label(
-            self,
-            text="Email:",
-            bootstyle="primary"
-        ).pack(anchor="w")
-        self.email_entry = ttk.Entry(self)
-        self.email_entry.pack(fill="x", pady=(0, 20))
-        
+        ttk.Label(self, text="Shop Name:", bootstyle="primary").pack(anchor="w")
+        self.shop_name_entry = ttk.Entry(self)
+        self.shop_name_entry.pack(fill="x", pady=(0, 10))
+
+        # Floor No
+        ttk.Label(self, text="Floor No:", bootstyle="primary").pack(anchor="w")
+        self.floor_no_entry = ttk.Entry(self)
+        self.floor_no_entry.pack(fill="x", pady=(0, 10))
+
+        # Shop No
+        ttk.Label(self, text="Shop No:", bootstyle="primary").pack(anchor="w")
+        self.shop_no_entry = ttk.Entry(self)
+        self.shop_no_entry.pack(fill="x", pady=(0, 10))
+
+        # Description
+        ttk.Label(self, text="Description:", bootstyle="primary").pack(anchor="w")
+        self.description_entry = ttk.Entry(self)
+        self.description_entry.pack(fill="x", pady=(0, 10))
+
+        # Rent Amount
+        ttk.Label(self, text="Rent Amount:", bootstyle="primary").pack(anchor="w")
+        self.rent_entry = ttk.Entry(self)
+        self.rent_entry.pack(fill="x", pady=(0, 20))
+
+        # Shop Owner
+        ttk.Label(self, text="Shop Owner:", bootstyle="primary").pack(anchor="w")
+        self.shop_owner_combobox = ttk.Combobox(self, state="readonly")
+        self.shop_owner_combobox.pack(fill="x", pady=(0, 10))
+
+        # Load shop owners into the combobox
+        self.load_shop_owners()
+
         # Submit button
-        ttk.Button(
-            self,
-            text="Create Shop",
-            command=self.create_shop,
-            bootstyle="primary",
-            width=20
-        ).pack()
+        ttk.Button(self, text="Create Shop", command=self.create_shop, bootstyle="primary", width=20).pack()
+    
+    def load_shop_owners(self):
+        """Loads shop owners into the combobox."""
+        try:
+            session = Session()
+            shop_owners = session.query(ShopOwnerProfile).all()
+            session.close()
+
+            print(shop_owners)
+
+            # Populate the combobox with the owners' names and their IDs
+            self.shop_owner_combobox['values'] = [owner.ownner_name for owner in shop_owners]  # Assuming `owner_name` is a field
+            self.shop_owner_combobox.set('')  # Optionally set a default value
+
+        except Exception as e:
+            Messagebox.show_error(message=f"Error loading shop owners: {str(e)}", title="Error", parent=self)
     
     def create_shop(self):
         """Handle shop creation."""
-        name = self.name_entry.get()
-        address = self.address_entry.get()
-        phone = self.phone_entry.get()
-        email = self.email_entry.get()
-        
-        if not all([name, address, phone]):
-            ttk.dialogs.Messagebox.show_error(
-                message="Name, address and phone are required!",
-                title="Validation Error",
-                parent=self
-            )
+        shop_name = self.shop_name_entry.get().strip()
+        floor_no = self.floor_no_entry.get().strip()
+        shop_no = self.shop_no_entry.get().strip()
+        description = self.description_entry.get().strip()
+        rent_amount = self.rent_entry.get().strip()
+
+        shop_owner_name = self.shop_owner_combobox.get().strip()
+
+        if not all([shop_name, floor_no, shop_no, description, shop_owner_name]):
+            Messagebox.show_error(message="All fields except rent amount are required!", title="Validation Error", parent=self)
             return
-        
+
         try:
+            rent = float(rent_amount) if rent_amount else None  # Convert rent to float if provided
+        except ValueError:
+            Messagebox.show_error(message="Rent amount must be a valid number!", title="Validation Error", parent=self)
+            return
+
+        try:
+            # Retrieve the shop owner id based on the selected owner name
             session = Session()
-            
-            # Check if shop exists
-            existing_shop = session.query(Shop).filter_by(name=name).first()
-            if existing_shop:
+            shop_owner = session.query(ShopOwnerProfile).filter_by(ownner_name=shop_owner_name).first()  # Adjust this query if needed
+            if not shop_owner:
                 session.close()
-                ttk.dialogs.Messagebox.show_error(
-                    message="Shop already exists!",
-                    title="Validation Error",
-                    parent=self
-                )
+                Messagebox.show_error(message="Selected shop owner does not exist!", title="Validation Error", parent=self)
                 return
-            
-            # Create new shop
-            new_shop = Shop(
-                name=name,
-                address=address,
-                phone=phone,
-                email=email
+
+            # Create new shop profile
+            new_shop = ShopProfile(
+                shop_owner_id=shop_owner.id,  # Using the selected shop owner's ID
+                floor_no=floor_no,
+                shop_no=shop_no,
+                shop_name=shop_name,
+                descreption=description,
+                rent_amout=rent,
+                created_by=1  # This should be dynamically set based on the logged-in user
             )
             
             session.add(new_shop)
             session.commit()
             session.close()
             
-            ttk.dialogs.Messagebox.show_info(
-                message="Shop created successfully!",
-                title="Success",
-                parent=self
-            )
+            Messagebox.show_info(message="Shop created successfully!", title="Success", parent=self)
             
             # Clear form
-            self.name_entry.delete(0, "end")
-            self.address_entry.delete(0, "end")
-            self.phone_entry.delete(0, "end")
-            self.email_entry.delete(0, "end")
-            
+            self.shop_name_entry.delete(0, "end")
+            self.floor_no_entry.delete(0, "end")
+            self.shop_no_entry.delete(0, "end")
+            self.description_entry.delete(0, "end")
+            self.rent_entry.delete(0, "end")
+            self.shop_owner_combobox.set('')
+
         except Exception as e:
-            ttk.dialogs.Messagebox.show_error(
-                message=f"Error creating shop: {str(e)}",
-                title="Error",
-                parent=self
-            )
+            Messagebox.show_error(message=f"Error creating shop: {str(e)}", title="Error", parent=self)

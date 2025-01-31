@@ -7,6 +7,12 @@ from views.users.list_user_view import ListUserView
 from views.users.create_role_view import CreateRoleView
 from views.shops.create_shop_view import CreateShopView
 from views.shops.list_shop_view import ListShopView
+from views.shopOwner.create_shop_owner_view import CreateShopOwnerView
+from views.shopOwner.lisr_shop_owner_view import ListShopOwnerView
+from views.shopRenters.create_renter_view import CreateShopRenterView
+from views.shopRenters.list_renter_view import ShopRenterListView
+from views.shopAllocation.create_shop_allocation_view import CreateShopAllocationView
+from views.shopAllocation.list_shop_allocation_view import ListShopAllocationView
 from PIL import Image, ImageTk
 import os
 
@@ -58,6 +64,15 @@ class DashboardView(ttk.Frame):
         menubar.add_cascade(label="Shop Management", menu=shop_menu)
         shop_menu.add_command(label="Create Shop", command=self.create_shop)
         shop_menu.add_command(label="List Shops", command=self.list_shops)
+        user_menu.add_separator()
+        shop_menu.add_command(label="Create Shop Owner", command=self.create_shop_owner)
+        shop_menu.add_command(label="List Shop Owners", command=self.list_shop_owners)
+        user_menu.add_separator()
+        shop_menu.add_command(label="Create Shop Renter", command=self.create_shop_renter)
+        shop_menu.add_command(label="List Shop Renters", command=self.list_shop_renters)
+        user_menu.add_separator()
+        shop_menu.add_command(label="Create Shop Allocation", command=self.create_shop_allocation)
+        shop_menu.add_command(label="List Shop Allocations", command=self.list_shop_allocations)
         
         # Help Menu
         help_menu = Menu(menubar, tearoff=0)
@@ -111,6 +126,31 @@ class DashboardView(ttk.Frame):
     def list_shops(self):
         """Opens list shops window."""
         self.window_manager.create_window("Shop List", ListShopView)
+
+    def create_shop_owner(self):
+        """Opens create shop owner window."""
+        self.window_manager.create_window("Create Shop Owner", CreateShopOwnerView)
+    
+    def list_shop_owners(self):
+        """Opens list shop owners window."""
+        self.window_manager.create_window("Shop Owner List", ListShopOwnerView)
+
+    def create_shop_renter(self):
+        """Opens create shop renter window."""
+        self.window_manager.create_window("Create Shop Renter", CreateShopRenterView)
+    
+    def list_shop_renters(self):
+        """Opens list shop renters window."""
+        self.window_manager.create_window("Shop Renter List", ShopRenterListView)
+
+    def create_shop_allocation(self):
+        """Opens create shop allocation window."""
+        self.window_manager.create_window("Create Shop Allocation", CreateShopAllocationView)
+    
+    def list_shop_allocations(self):
+        """Opens list shop allocations window."""
+        self.window_manager.create_window("Shop Allocation List", ListShopAllocationView)
+
     
     def show_about(self):
         """Shows about dialog."""
