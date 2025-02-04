@@ -56,8 +56,8 @@ class DashboardView(ttk.Frame):
         menubar.add_cascade(label="User Management", menu=user_menu)
         user_menu.add_command(label="Create User", command=self.create_user)
         user_menu.add_command(label="List Users", command=self.list_users)
-        user_menu.add_separator()
-        user_menu.add_command(label="Create Role", command=self.create_role)
+        # user_menu.add_separator()
+        # user_menu.add_command(label="Create Role", command=self.create_role)
         
         # Shop Management Menu
         shop_menu = Menu(menubar, tearoff=0)

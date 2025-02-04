@@ -12,7 +12,7 @@ from werkzeug.security import generate_password_hash
 
 class CreateUserView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=(20, 10))  # Reduced padding
+        super().__init__(parent, padding=(20, 10))
         self.parent = parent
         
         # Configure styles

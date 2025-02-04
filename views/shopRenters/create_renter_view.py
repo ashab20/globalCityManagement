@@ -1,11 +1,14 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-from tkinter import StringVar, filedialog
+from tkinter import StringVar, filedialog, messagebox
 import base64
 from sqlalchemy.orm import sessionmaker
 from models.shop_renter_profile import ShopRenterProfile
 from utils.database import Session
 import threading
+import os
+
+from utils.image_uploader import file_to_base64
 
 class CreateShopRenterView(ttk.Frame):
     def __init__(self, parent):
@@ -18,7 +21,7 @@ class CreateShopRenterView(ttk.Frame):
         self.email = StringVar()
         self.address = StringVar()
         self.nid_number = StringVar()
-        self.nid_front_base64 = StringVar()  # Store Base64 data
+        self.nid_front_base64 = StringVar() 
         self.nid_back_base64 = StringVar()
         self.documents_base64 = StringVar()
 
@@ -72,41 +75,82 @@ class CreateShopRenterView(ttk.Frame):
 
     def upload_nid_front(self):
         """Upload front side of NID and convert to Base64."""
-        try:
-            file_path = filedialog.askopenfilename(title="Select NID Front", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
-            if not file_path:  # Check if no file was selected
-                print("No file selected.")
-                return  # or handle the situation gracefully
-            
-            with open(file_path, "rb") as file:
-                base64_str = base64.b64encode(file.read()).decode("utf-8")
-                self.nid_front_base64.set(base64_str)
-            self.nid_front_label.config(text="File selected ✔", foreground="green")
-        except Exception as e:
-            print(f"Error uploading NID front: {str(e)}")
-            self.nid_front_label.config(text="Error uploading file", foreground="red")
+        file_path = filedialog.askopenfilename(
+            title="Select NID Front",
+            filetypes=[("Image Files", "*.png *.jpg *.jpeg")]  # Corrected filetypes format
+        )
 
+        if file_path:
+            try:
+                with open(file_path, "rb") as file:
+                    image_data = file.read()
+                    base64_str = base64.b64encode(image_data).decode("utf-8")
+                    self.nid_front_base64.set(base64_str)
+                self.nid_front_label.config(text=f"File selected ✔ {os.path.basename(file_path)}", foreground="green")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not read image: {str(e)}")
 
-        threading.Thread(target=worker, daemon=True).start()
 
     def upload_nid_back(self):
         """Upload back side of NID and convert to Base64."""
-        file_path = filedialog.askopenfilename(title="Select NID Back", filetypes=[("Image Files", "*.png;*.jpg;*.jpeg")])
+        file_path = filedialog.askopenfilename(
+            title="Select NID Back",
+            filetypes=[("Image Files", "*.png *.jpg *.jpeg")]  # Corrected filetypes format
+        )
+
         if file_path:
-            with open(file_path, "rb") as file:
-                base64_str = base64.b64encode(file.read()).decode("utf-8")
-                self.nid_back_base64.set(base64_str)
-            self.nid_back_label.config(text="File selected ✔", foreground="green")
+            try:
+                with open(file_path, "rb") as file:
+                    image_data = file.read()
+                    base64_str = base64.b64encode(image_data).decode("utf-8")
+                    self.nid_back_base64.set(base64_str)
+                self.nid_back_label.config(text=f"File selected ✔ {os.path.basename(file_path)}", foreground="green")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not read image: {str(e)}")
 
     def upload_documents(self):
-        """Upload other documents and convert to Base64."""
-        file_path = filedialog.askopenfilename(title="Select Documents", filetypes=[("PDF Files", "*.pdf"), ("Image Files", "*.png;*.jpg;*.jpeg")])
-        if file_path:
-            with open(file_path, "rb") as file:
-                base64_str = base64.b64encode(file.read()).decode("utf-8")
-                self.documents_base64.set(base64_str)
-            self.documents_label.config(text="File selected ✔", foreground="green")
+        """Upload back side of NID and convert to Base64."""
+        file_path = filedialog.askopenfilename(
+            title="Select NID Back",
+            filetypes=[("Image Files", "*.png *.jpg *.jpeg")]  # Corrected filetypes format
+        )
 
+        if file_path:
+            try:
+                with open(file_path, "rb") as file:
+                    image_data = file.read()
+                    base64_str = base64.b64encode(image_data).decode("utf-8")
+                    self.documents_base64.set(base64_str)
+                self.documents_label.config(text=f"File selected ✔ {os.path.basename(file_path)}", foreground="green")
+            except Exception as e:
+                messagebox.showerror("Error", f"Could not read image: {str(e)}")
+
+    # def upload_documents(self):
+    #     """Upload and process additional documents."""
+    #     try:
+    #         file_path = filedialog.askopenfilename(
+    #             title="Select Document",
+    #             filetypes=[("PDF Files", "*.pdf"), ("Image Files", "*.png;*.jpg;*.jpeg")]
+    #         )
+    #         if not file_path:
+    #             print("No file selected.")
+    #             return
+
+    #         is_image = file_path.lower().endswith((".png", ".jpg", ".jpeg"))
+    #         base64_str = file_to_base64(file_path, is_image=is_image)
+
+    #         if base64_str:
+    #             self.documents_base64.set(base64_str)
+    #             self.documents_label.config(
+    #                 text=f"File selected ✔ {os.path.basename(file_path)}", foreground="green"
+    #             )
+    #         else:
+    #             self.documents_label.config(text="Error processing file", foreground="red")
+    #     except Exception as e:
+    #         print(f"Error uploading document: {str(e)}")
+    #         messagebox.showerror("Error", f"Error uploading file: {str(e)}")
+    #         self.documents_label.config(text="Error uploading file", foreground="red")
+    
     def save_shop_renter(self):
         """Saves the shop renter to the database."""
         try:

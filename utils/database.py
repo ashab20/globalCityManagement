@@ -8,7 +8,7 @@ MYSQL_USERNAME = "root"
 MYSQL_PASSWORD = "ServBay.dev" 
 MYSQL_HOST = "localhost"        
 MYSQL_PORT = 3306               
-MYSQL_DATABASE = "baliarchide" 
+MYSQL_DATABASE = "global_city_management" 
 
 # Use pymysql as the driver (or mysqlclient if preferred)
 DATABASE_URL = f"mysql+pymysql://{MYSQL_USERNAME}:{MYSQL_PASSWORD}@{MYSQL_HOST}:{MYSQL_PORT}/{MYSQL_DATABASE}"

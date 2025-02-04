@@ -10,10 +10,10 @@ def create_roles():
     """Create roles"""
     session = Session()
     roles = [
-        "Admin",
-        "Manager",
-        "Shopkeeper",
-        "Staff",
+        "Super Admin",
+        "IT Admin",
+        "Account Manager",
+        "Executives",
         "User"
     ]
     
