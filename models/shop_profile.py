@@ -11,6 +11,9 @@ class ShopProfile(Base):
     floor_no = Column(String(100), nullable=False)
     shop_no = Column(String(100), nullable=False)
     shop_name = Column(String(100), nullable=False)
+    rent_type = Column(String(100), nullable=False)
+    shop_size = Column(Numeric(10,2), nullable=False)
+    per_sqr_fit_amt = Column(Numeric(10,2), nullable=False)
     descreption = Column(String(255), nullable=False)
     rent_amout = Column(Numeric(10, 2), nullable=True)
     created_by = Column(Integer, nullable=True)
@@ -25,3 +28,6 @@ class ShopProfile(Base):
 
     def __repr__(self):
         return f"<ShopProfile(id={self.id}, name='{self.shop_name}', floor_no='{self.floor_no}')>"
+
+
+# ALTER TABLE `db_globalcity`.`shop_profile` ADD COLUMN `rent_type` VARCHAR(20) NULL AFTER `descreption`, ADD COLUMN `shop_size` DECIMAL(10,2) NULL COMMENT 'square fit' AFTER `rent_type`, ADD COLUMN `per_sqr_fit_amt` DECIMAL(10,2) NULL AFTER `shop_size`; 

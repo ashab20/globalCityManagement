@@ -33,10 +33,12 @@ def create_initial_data():
             session.add(admin_user)
         
         # Create basic user role if it doesn't exist
-        user_role = session.query(UserRole).filter_by(name="User").first()
-        if not user_role:
-            user_role = UserRole(name="User")
-            session.add(user_role)
+        roles = [
+                UserRole(name="IT Admin"),
+                UserRole(name="Executives"),
+            ]
+
+        session.add_all(roles)
         
         session.commit()
         print("Initial data created successfully!")

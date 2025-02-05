@@ -156,6 +156,6 @@ class DashboardView(ttk.Frame):
         """Shows about dialog."""
         ttk.dialogs.Messagebox.show_info(
             title="About",
-            message="Global City Management System\nVersion 1.0\n\nDeveloped by Your Name",
+            message="Global City Management System\nVersion 1.0\n\nDeveloped by BITPOINT TECHNOLOGIES LTD.",
             parent=self
         )

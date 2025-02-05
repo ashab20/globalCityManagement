@@ -43,11 +43,21 @@ class CreateShopView(ttk.Frame):
         ttk.Label(self, text="Description:", bootstyle="primary").pack(anchor="w")
         self.description_entry = ttk.Entry(self)
         self.description_entry.pack(fill="x", pady=(0, 10))
+        
+        # shop_size
+        ttk.Label(self, text="Shop Size:", bootstyle="primary").pack(anchor="w")
+        self.shop_size_entry = ttk.Entry(self)
+        self.shop_size_entry.pack(fill="x", pady=(0, 10))
+
+        # Rent Type
+        ttk.Label(self, text="Rent Type:", bootstyle="primary").pack(anchor="w")
+        self.rent_type_entry = ttk.Combobox(self, values=["Fixed", "Per Square Feet"], state="readonly")
+        self.rent_type_entry.pack(fill="x", pady=(0, 10))
 
         # Rent Amount
         ttk.Label(self, text="Rent Amount:", bootstyle="primary").pack(anchor="w")
         self.rent_entry = ttk.Entry(self)
-        self.rent_entry.pack(fill="x", pady=(0, 20))
+        self.rent_entry.pack(fill="x", pady=(0, 10))
 
         # Shop Owner
         ttk.Label(self, text="Shop Owner:", bootstyle="primary").pack(anchor="w")
@@ -84,6 +94,9 @@ class CreateShopView(ttk.Frame):
         description = self.description_entry.get().strip()
         rent_amount = self.rent_entry.get().strip()
 
+        rent_type = self.rent_type_entry.get().strip()
+        shop_size = self.shop_size_entry.get().strip()
+
         shop_owner_name = self.shop_owner_combobox.get().strip()
 
         if not all([shop_name, floor_no, shop_no, description, shop_owner_name]):
@@ -91,10 +104,23 @@ class CreateShopView(ttk.Frame):
             return
 
         try:
+            shop_size = float(shop_size)
+        except ValueError:
+            Messagebox.show_error(message="Shop size must be a number", title="Validation Error", parent=self)
+            return
+
+        try:
             rent = float(rent_amount) if rent_amount else None  # Convert rent to float if provided
         except ValueError:
             Messagebox.show_error(message="Rent amount must be a valid number!", title="Validation Error", parent=self)
             return
+
+        # Calculate per_sqr_fit_amt based on rent type
+        per_sqr_fit_amt = None
+        if rent_type == "Per Square Feet":
+            per_sqr_fit_amt = rent / shop_size
+        elif rent_type == "Fixed":
+            per_sqr_fit_amt = 0  # or some default value
 
         try:
             # Retrieve the shop owner id based on the selected owner name
@@ -112,6 +138,9 @@ class CreateShopView(ttk.Frame):
                 shop_no=shop_no,
                 shop_name=shop_name,
                 descreption=description,
+                rent_type=rent_type,
+                shop_size=shop_size,
+                per_sqr_fit_amt=per_sqr_fit_amt,
                 rent_amout=rent,
                 created_by=1  # This should be dynamically set based on the logged-in user
             )
@@ -128,6 +157,8 @@ class CreateShopView(ttk.Frame):
             self.shop_no_entry.delete(0, "end")
             self.description_entry.delete(0, "end")
             self.rent_entry.delete(0, "end")
+            self.shop_size_entry.delete(0, "end")
+            self.rent_type_entry.delete(0, "end")
             self.shop_owner_combobox.set('')
 
         except Exception as e:
