@@ -8,9 +8,10 @@ from utils.database import Session
 import os
 
 class CreateShopOwnerView(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, existing_shop_owner=None):
         super().__init__(parent, padding=20)
         self.parent = parent
+        self.existing_shop_owner = existing_shop_owner
 
         # StringVars for input fields
         self.owner_name = StringVar()
@@ -24,10 +25,31 @@ class CreateShopOwnerView(ttk.Frame):
         # UI Components
         self.create_form()
 
+        # If editing an existing shop owner, pre-fill the form
+        if existing_shop_owner:
+            self.pre_fill_form()
+
+    def pre_fill_form(self):
+        """Pre-fill form with existing shop owner details."""
+        self.owner_name.set(self.existing_shop_owner.ownner_name)
+        self.phone.set(self.existing_shop_owner.phone)
+        self.email.set(self.existing_shop_owner.email)
+        self.address.set(self.existing_shop_owner.address)
+        self.nid_number.set(self.existing_shop_owner.nid_number)
+
+        # Handle NID images
+        if self.existing_shop_owner.nid_front:
+            base64_front = base64.b64encode(self.existing_shop_owner.nid_front).decode('utf-8')
+            self.nid_front_base64.set(base64_front)
+            self.nid_front_label.config(text="NID Front Uploaded ✔", foreground="green")
+        
+        if self.existing_shop_owner.nid_back:
+            base64_back = base64.b64encode(self.existing_shop_owner.nid_back).decode('utf-8')
+            self.nid_back_base64.set(base64_back)
+            self.nid_back_label.config(text="NID Back Uploaded ✔", foreground="green")
+
     def create_form(self):
         """Creates the form for entering shop owner details."""
-        # ttk.Label(self, text="Create Shop Owner", font=("Helvetica", 16, "bold"), bootstyle="primary").pack(pady=(0, 20))
-
         form_frame = ttk.Frame(self)
         form_frame.pack(fill="x", pady=10)
 
@@ -62,9 +84,15 @@ class CreateShopOwnerView(ttk.Frame):
         self.nid_back_label.grid(row=6, column=1, sticky="w", padx=5, pady=5)
 
         # Submit Button
-        ttk.Button(self, text="Save Shop Owner", command=self.save_shop_owner, bootstyle="success").pack(pady=(10, 0))
-
-
+        submit_text = "Save Shop Owner" if not self.existing_shop_owner else "Update Shop Owner"
+        submit_command = self.save_shop_owner
+        self.save_button = ttk.Button(
+            self, 
+            text=submit_text, 
+            command=submit_command, 
+            bootstyle="success"
+        )
+        self.save_button.pack(pady=(10, 0))
 
     def upload_nid_front(self):
         """Upload front side of NID and convert to Base64."""
@@ -102,27 +130,52 @@ class CreateShopOwnerView(ttk.Frame):
                 messagebox.showerror("Error", f"Could not read image: {str(e)}")
 
     def save_shop_owner(self):
-        """Saves the shop owner to the database."""
+        """Saves or updates the shop owner in the database."""
         try:
             session = Session()
+            
             # Decode Base64 strings to binary data
             nid_front_binary = base64.b64decode(self.nid_front_base64.get()) if self.nid_front_base64.get() else None
             nid_back_binary = base64.b64decode(self.nid_back_base64.get()) if self.nid_back_base64.get() else None
-            new_owner = ShopOwnerProfile(
-                ownner_name=self.owner_name.get(),
-                phone=self.phone.get(),
-                email=self.email.get(),
-                address=self.address.get(),
-                nid_number=self.nid_number.get(),
-                nid_front=nid_front_binary,
-                nid_back=nid_back_binary,
-                active_status=1 
-            )
-            session.add(new_owner)
+            
+            if self.existing_shop_owner:
+                # Update existing shop owner
+                shop_owner = session.query(ShopOwnerProfile).filter_by(id=self.existing_shop_owner.id).first()
+                if not shop_owner:
+                    raise ValueError("Shop owner not found")
+                
+                shop_owner.ownner_name = self.owner_name.get()
+                shop_owner.phone = self.phone.get()
+                shop_owner.email = self.email.get()
+                shop_owner.address = self.address.get()
+                shop_owner.nid_number = self.nid_number.get()
+                
+                # Update NID images only if new ones are uploaded
+                if nid_front_binary:
+                    shop_owner.nid_front = nid_front_binary
+                if nid_back_binary:
+                    shop_owner.nid_back = nid_back_binary
+                
+                message = "Shop owner updated successfully!"
+            else:
+                # Create new shop owner
+                new_owner = ShopOwnerProfile(
+                    ownner_name=self.owner_name.get(),
+                    phone=self.phone.get(),
+                    email=self.email.get(),
+                    address=self.address.get(),
+                    nid_number=self.nid_number.get(),
+                    nid_front=nid_front_binary,
+                    nid_back=nid_back_binary,
+                    active_status=1 
+                )
+                session.add(new_owner)
+                message = "Shop owner added successfully!"
+            
             session.commit()
             session.close()
 
-            ttk.dialogs.Messagebox.show_info(message="Shop owner added successfully!", title="Success", parent=self)
+            ttk.dialogs.Messagebox.show_info(message=message, title="Success", parent=self)
             self.clear_form()
         except Exception as e:
             ttk.dialogs.Messagebox.show_error(message=f"Error saving shop owner: {str(e)}", title="Error", parent=self)

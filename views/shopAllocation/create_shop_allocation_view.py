@@ -9,9 +9,10 @@ from utils.database import Session
 
 
 class CreateShopAllocationView(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, existing_allocation=None):
         super().__init__(parent, padding=20)
         self.parent = parent
+        self.existing_allocation = existing_allocation
 
         # StringVars for input fields
         self.shop_profile_id = StringVar()
@@ -29,10 +30,47 @@ class CreateShopAllocationView(ttk.Frame):
         # UI Components
         self.create_form()
 
+        # If editing an existing allocation, pre-fill the form
+        if existing_allocation:
+            self.pre_fill_form()
+
+    def pre_fill_form(self):
+        """Pre-fill form with existing allocation details."""
+        # Populate dropdowns first
+        self.populate_shop_profiles()
+        self.populate_renter_profiles()
+
+        # Find the display name for the shop and renter
+        shop_display_name = None
+        for name, shop_id in self.shop_profile_map.items():
+            if shop_id == self.existing_allocation.shop_profile_id:
+                shop_display_name = name
+                break
+
+        renter_display_name = None
+        for name, renter_id in self.renter_profile_map.items():
+            if renter_id == self.existing_allocation.renter_profile_id:
+                renter_display_name = name
+                break
+
+        # Set the dropdowns and IDs
+        if shop_display_name:
+            self.shop_profile_dropdown.set(shop_display_name)
+            self.shop_profile_id.set(self.existing_allocation.shop_profile_id)
+
+        if renter_display_name:
+            self.renter_profile_dropdown.set(renter_display_name)
+            self.renter_profile_id.set(self.existing_allocation.renter_profile_id)
+
+        # Set other fields
+        self.from_year.set(str(self.existing_allocation.from_year))
+        self.from_month.set(str(self.existing_allocation.from_month))
+        self.to_year.set(str(self.existing_allocation.to_year))
+        self.to_month.set(str(self.existing_allocation.to_month))
+        self.close_status.set(self.existing_allocation.close_status)
+
     def create_form(self):
         """Creates the form for allocating a shop."""
-        # ttk.Label(self, text="Create Shop Allocation", font=("Helvetica", 16, "bold"), bootstyle="primary").pack(pady=(0, 20))
-
         form_frame = ttk.Frame(self)
         form_frame.pack(fill="x", pady=10)
 
@@ -69,7 +107,15 @@ class CreateShopAllocationView(ttk.Frame):
         ttk.Checkbutton(form_frame, text="Close", variable=self.close_status, bootstyle="warning").grid(row=6, column=1, padx=5, pady=5)
 
         # Submit Button
-        ttk.Button(self, text="Save Allocation", command=self.save_shop_allocation, bootstyle="success").pack(pady=(10, 0))
+        submit_text = "Save Allocation" if not self.existing_allocation else "Update Allocation"
+        submit_command = self.save_shop_allocation
+        self.submit_button = ttk.Button(
+            self, 
+            text=submit_text, 
+            command=submit_command, 
+            bootstyle="success"
+        )
+        self.submit_button.pack(pady=(10, 0))
 
     def populate_shop_profiles(self):
         """Populate the shop profile dropdown with available shops from the database."""
@@ -152,27 +198,44 @@ class CreateShopAllocationView(ttk.Frame):
             print(f"Selected Renter ID: {renter_id}")
 
     def save_shop_allocation(self):
-            """Saves the shop allocation to the database."""
-            try:
-                # Validate that selections have been made
-                if not self.shop_profile_id.get():
-                    ttk.dialogs.Messagebox.show_warning(
-                        message="Please select a shop profile.", 
-                        title="Validation Error", 
-                        parent=self
-                    )
-                    return
+        """Saves or updates the shop allocation to the database."""
+        try:
+            # Validate that selections have been made
+            if not self.shop_profile_id.get():
+                ttk.dialogs.Messagebox.show_warning(
+                    message="Please select a shop profile.", 
+                    title="Validation Error", 
+                    parent=self
+                )
+                return
 
-                if not self.renter_profile_id.get():
-                    ttk.dialogs.Messagebox.show_warning(
-                        message="Please select a renter profile.", 
-                        title="Validation Error", 
-                        parent=self
-                    )
-                    return
+            if not self.renter_profile_id.get():
+                ttk.dialogs.Messagebox.show_warning(
+                    message="Please select a renter profile.", 
+                    title="Validation Error", 
+                    parent=self
+                )
+                return
 
-                session = Session()
+            session = Session()
 
+            if self.existing_allocation:
+                # Update existing allocation
+                allocation = session.query(ShopAllocation).filter_by(id=self.existing_allocation.id).first()
+                if not allocation:
+                    raise ValueError("Allocation not found")
+                
+                allocation.shop_profile_id = int(self.shop_profile_id.get())
+                allocation.renter_profile_id = int(self.renter_profile_id.get())
+                allocation.from_year = self.from_year.get()
+                allocation.from_month = self.from_month.get()
+                allocation.to_year = self.to_year.get()
+                allocation.to_month = self.to_month.get()
+                allocation.close_status = self.close_status.get()
+                
+                message = "Shop allocation updated successfully!"
+            else:
+                # Create new allocation
                 new_allocation = ShopAllocation(
                     shop_profile_id=int(self.shop_profile_id.get()),
                     renter_profile_id=int(self.renter_profile_id.get()),
@@ -182,32 +245,31 @@ class CreateShopAllocationView(ttk.Frame):
                     to_month=self.to_month.get(),
                     close_status=self.close_status.get()
                 )
-
                 session.add(new_allocation)
-                session.commit()
-                session.close()
+                message = "Shop allocation added successfully!"
 
-                ttk.dialogs.Messagebox.show_info(
-                    message=f"Shop allocation added successfully!\n\nShop: {self.shop_profile_dropdown.get()}\nRenter: {self.renter_profile_dropdown.get()}", 
-                    title="Success", 
-                    parent=self
-                )
-                self.clear_form()
-            except Exception as e:
-                ttk.dialogs.Messagebox.show_error(
-                    message=f"Error saving shop allocation: {str(e)}", 
-                    title="Error", 
-                    parent=self
-                )
+            session.commit()
+            session.close()
+
+            ttk.dialogs.Messagebox.show_info(
+                message=message, 
+                title="Success", 
+                parent=self
+            )
+            self.clear_form()
+        except Exception as e:
+            ttk.dialogs.Messagebox.show_error(
+                message=f"Error saving shop allocation: {str(e)}", 
+                title="Error", 
+                parent=self
+            )
 
     def clear_form(self):
-        """Clears the form fields after successful submission."""
-        self.shop_profile_dropdown.set('')  # Clear dropdown display
-        self.renter_profile_dropdown.set('')  # Clear dropdown display
-        self.shop_profile_id.set("")
-        self.renter_profile_id.set("")
-        self.from_year.set("")
-        self.from_month.set("")
-        self.to_year.set("")
-        self.to_month.set("")
+        """Clear all form fields."""
+        self.shop_profile_dropdown.set('')
+        self.renter_profile_dropdown.set('')
+        self.from_year.set('')
+        self.from_month.set('')
+        self.to_year.set('')
+        self.to_month.set('')
         self.close_status.set(0)

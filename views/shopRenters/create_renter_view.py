@@ -11,9 +11,10 @@ import os
 from utils.image_uploader import file_to_base64
 
 class CreateShopRenterView(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, existing_renter=None):
         super().__init__(parent, padding=20)
         self.parent = parent
+        self.existing_renter = existing_renter
 
         # StringVars for input fields
         self.renter_name = StringVar()
@@ -28,10 +29,19 @@ class CreateShopRenterView(ttk.Frame):
         # UI Components
         self.create_form()
 
-    def create_form(self):
-        # """Creates the form for entering shop renter details."""
-        # ttk.Label(self, text="Create Shop Renter", font=("Helvetica", 16, "bold"), bootstyle="primary").pack(pady=(0, 20))
+        # If editing an existing renter, pre-fill the form
+        if existing_renter:
+            self.pre_fill_form()
 
+    def pre_fill_form(self):
+        """Pre-fill form with existing renter details."""
+        self.renter_name.set(self.existing_renter.renter_name)
+        self.phone.set(self.existing_renter.phone)
+        self.email.set(self.existing_renter.email)
+        self.address.set(self.existing_renter.address)
+        self.nid_number.set(self.existing_renter.nid_number)
+
+    def create_form(self):
         form_frame = ttk.Frame(self)
         form_frame.pack(fill="x", pady=10)
 
@@ -71,7 +81,10 @@ class CreateShopRenterView(ttk.Frame):
         self.documents_label.grid(row=7, column=1, sticky="w", padx=5, pady=5)
 
         # Submit Button
-        ttk.Button(self, text="Save Shop Renter", command=self.save_shop_renter, bootstyle="success").pack(pady=(10, 0))
+        submit_text = "Save Shop Renter" if not self.existing_renter else "Update Shop Renter"
+        submit_command = self.save_shop_renter
+        self.submit_button = ttk.Button(self, text=submit_text, command=submit_command, bootstyle="success")
+        self.submit_button.pack(pady=(10, 0))
 
     def upload_nid_front(self):
         """Upload front side of NID and convert to Base64."""
@@ -152,28 +165,44 @@ class CreateShopRenterView(ttk.Frame):
     #         self.documents_label.config(text="Error uploading file", foreground="red")
     
     def save_shop_renter(self):
-        """Saves the shop renter to the database."""
+        """Saves or updates the shop renter in the database."""
         try:
             session = Session()
-            new_renter = ShopRenterProfile(
-                renter_name=self.renter_name.get(),
-                phone=self.phone.get(),
-                email=self.email.get(),
-                address=self.address.get(),
-                nid_number=self.nid_number.get(),
-                # nid_front=self.nid_front_base64.get(),
-                # nid_back=self.nid_back_base64.get(),
-                # documents=self.documents_base64.get(),
-                active_status=1  # Default to active
-            )
-            session.add(new_renter)
+            
+            if self.existing_renter:
+                # Update existing renter
+                renter = session.query(ShopRenterProfile).filter_by(id=self.existing_renter.id).first()
+                if not renter:
+                    raise ValueError("Renter not found")
+                
+                renter.renter_name = self.renter_name.get()
+                renter.phone = self.phone.get()
+                renter.email = self.email.get()
+                renter.address = self.address.get()
+                renter.nid_number = self.nid_number.get()
+                
+                message = "Shop renter updated successfully!"
+            else:
+                # Create new renter
+                new_renter = ShopRenterProfile(
+                    renter_name=self.renter_name.get(),
+                    phone=self.phone.get(),
+                    email=self.email.get(),
+                    address=self.address.get(),
+                    nid_number=self.nid_number.get(),
+                    active_status=1  # Default to active
+                )
+                session.add(new_renter)
+                message = "Shop renter added successfully!"
+            
             session.commit()
             session.close()
 
-            ttk.dialogs.Messagebox.show_info(message="Shop renter added successfully!", title="Success", parent=self)
+            ttk.dialogs.Messagebox.show_info(message=message, title="Success", parent=self)
             self.clear_form()
         except Exception as e:
             ttk.dialogs.Messagebox.show_error(message=f"Error saving shop renter: {str(e)}", title="Error", parent=self)
+            print(f"Error saving shop renter: {str(e)}")
 
     def clear_form(self):
         """Clears the form fields after successful submission."""
