@@ -1,6 +1,7 @@
 import ttkbootstrap as ttk
 from views.login_view import LoginView
 from views.dashboard_view import DashboardView
+from utils.database import setup_database, Session
 
 
 class App:
@@ -38,7 +39,7 @@ class App:
         self.current_view = LoginView(self.root, self.on_login)
         self.current_view.pack(fill="both", expand=True)
     
-    def show_dashboard(self):
+    def show_dashboard(self, user=None):
         """Show dashboard view."""
         if hasattr(self, 'current_view'):
             self.current_view.destroy()
@@ -51,9 +52,10 @@ class App:
         self.current_view = DashboardView(self.root, self.on_logout)
         self.current_view.pack(fill="both", expand=True)
     
-    def on_login(self):
+    def on_login(self, user=None):
         """Handle successful login."""
-        self.show_dashboard()
+        print(f"Login successful for user: {user}")
+        self.show_dashboard(user)
     
     def on_logout(self):
         """Handle logout."""
@@ -61,7 +63,19 @@ class App:
     
     def run(self):
         """Run the application."""
-        self.root.mainloop()
+        try:
+            # Initialize database
+            setup_database()
+            
+            # Start the main event loop
+            self.root.mainloop()
+        except Exception as e:
+            print(f"Application error: {e}")
+            import traceback
+            traceback.print_exc()
+        finally:
+            # Close any open database sessions
+            Session.remove()
 
 
 if __name__ == "__main__":

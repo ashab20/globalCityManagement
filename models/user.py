@@ -1,9 +1,9 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, LargeBinary
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, LargeBinary, Boolean
+from sqlalchemy.orm import relationship, joinedload
 from sqlalchemy.sql import func
 from utils.database import Session
 from .base import Base
-
+from datetime import datetime
 
 class User(Base):
     __tablename__ = "users"
@@ -22,19 +22,36 @@ class User(Base):
     active_status = Column(Integer, default=1, nullable=True)  # 1 = active, 0 = deactive
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    is_active = Column(Boolean, default=True)
+    last_login = Column(DateTime, nullable=True)
 
     # Relationships
-    role = relationship("UserRole", back_populates="users")
+    role = relationship("UserRole", back_populates="users", lazy="joined")
 
     def __repr__(self):
-        return f"<User(id={self.id}, login_id='{self.login_id}', email='{self.email}')>"
+        return f"<User(id={self.id}, login_id='{self.login_id}', email='{self.email}', role='{self.get_role_name()}')>"
+
+    def get_role_name(self):
+        """
+        Get the name of the user's role.
+        
+        :return: Role name as a string, default to 'staff' if no role
+        """
+        try:
+            return self.role.name if self.role else 'staff'
+        except Exception:
+            return 'staff'
 
     @classmethod
     def find_by_username(cls, login_id):
-        """Find a user by their login ID."""
+        """Find a user by their login ID with role information."""
         session = Session()
         try:
-            user = session.query(cls).filter(cls.login_id == login_id).first()
+            # Use joined load to fetch role information in the same query
+            user = session.query(cls).options(joinedload(cls.role)).filter(cls.login_id == login_id).first()
             return user
+        except Exception as e:
+            print(f"Error finding user: {e}")
+            return None
         finally:
             session.close()

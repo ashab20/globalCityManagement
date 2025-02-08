@@ -17,6 +17,8 @@ class CreateShopAllocationView(ttk.Frame):
         # StringVars for input fields
         self.shop_profile_id = StringVar()
         self.renter_profile_id = StringVar()
+        self.selected_shop_name = StringVar()
+        self.selected_renter_name = StringVar()
         self.from_year = StringVar()
         self.from_month = StringVar()
         self.to_year = StringVar()
@@ -74,17 +76,30 @@ class CreateShopAllocationView(ttk.Frame):
         form_frame = ttk.Frame(self)
         form_frame.pack(fill="x", pady=10)
 
-        # Shop Profile
+        # # Shop Profile
+        # ttk.Label(form_frame, text="Shop:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
+        # self.shop_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.shop_profile_id, width=40)
+        # self.populate_shop_profiles()  # Populate the dropdown
+        # self.shop_profile_dropdown.grid(row=0, column=1, padx=5, pady=5)
+
+        # # Renter Profile
+        # ttk.Label(form_frame, text="Renter:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
+        # self.renter_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.renter_profile_id, width=40)
+        # self.populate_renter_profiles()  # Populate the dropdown
+        # self.renter_profile_dropdown.grid(row=1, column=1, padx=5, pady=5)
+
+        # Shop Profile Dropdown
         ttk.Label(form_frame, text="Shop:").grid(row=0, column=0, sticky="w", padx=5, pady=5)
-        self.shop_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.shop_profile_id, width=40)
+        self.shop_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.selected_shop_name, width=40)
         self.populate_shop_profiles()  # Populate the dropdown
         self.shop_profile_dropdown.grid(row=0, column=1, padx=5, pady=5)
 
-        # Renter Profile
+        # Renter Profile Dropdown
         ttk.Label(form_frame, text="Renter:").grid(row=1, column=0, sticky="w", padx=5, pady=5)
-        self.renter_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.renter_profile_id, width=40)
+        self.renter_profile_dropdown = ttk.Combobox(form_frame, textvariable=self.selected_renter_name, width=40)
         self.populate_renter_profiles()  # Populate the dropdown
         self.renter_profile_dropdown.grid(row=1, column=1, padx=5, pady=5)
+
 
         # From Year
         ttk.Label(form_frame, text="From Year:").grid(row=2, column=0, sticky="w", padx=5, pady=5)
@@ -117,32 +132,40 @@ class CreateShopAllocationView(ttk.Frame):
         )
         self.submit_button.pack(pady=(10, 0))
 
+    def on_shop_profile_select(self, event):
+        """Handles the selection of a shop profile from the dropdown."""
+        selected_shop = self.selected_shop_name.get()
+        shop_id = self.shop_profile_map.get(selected_shop)
+        if shop_id is not None:
+            self.shop_profile_id.set(shop_id)  # Store the ID internally
+
+    def on_renter_profile_select(self, event):
+        """Handles the selection of a renter profile from the dropdown."""
+        selected_renter = self.selected_renter_name.get()
+        renter_id = self.renter_profile_map.get(selected_renter)
+        if renter_id is not None:
+            self.renter_profile_id.set(renter_id)  # Store the ID internally
+
+
     def populate_shop_profiles(self):
         """Populate the shop profile dropdown with available shops from the database."""
         try:
             session = Session()
             shops = session.query(ShopProfile).all()
-            
-            # Clear existing map
+
             self.shop_profile_map.clear()
-            
-            # Create shop names and populate map
             shop_names = []
             for shop in shops:
-                # Create a unique display name
                 display_name = f"{shop.shop_name} (Floor: {shop.floor_no}, No: {shop.shop_no})"
                 self.shop_profile_map[display_name] = shop.id
                 shop_names.append(display_name)
-            
-            # Set dropdown values
+
             self.shop_profile_dropdown['values'] = shop_names
-            
-            # Set default selection to first shop if available
+
             if shop_names:
-                self.shop_profile_dropdown.set(shop_names[0])
-                self.shop_profile_id.set(self.shop_profile_map[shop_names[0]])
-            
-            # Bind selection event
+                self.selected_shop_name.set(shop_names[0])  # Display name
+                self.shop_profile_id.set(self.shop_profile_map[shop_names[0]])  # Store ID
+
             self.shop_profile_dropdown.bind("<<ComboboxSelected>>", self.on_shop_profile_select)
 
             session.close()
@@ -151,7 +174,7 @@ class CreateShopAllocationView(ttk.Frame):
 
     def on_shop_profile_select(self, event):
         """Handles the selection of a shop profile from the dropdown."""
-        selected_shop = self.shop_profile_dropdown.get()
+        selected_shop = self.selected_shop_name.get()
         shop_id = self.shop_profile_map.get(selected_shop)
         if shop_id is not None:
             self.shop_profile_id.set(shop_id)
@@ -219,6 +242,13 @@ class CreateShopAllocationView(ttk.Frame):
 
             session = Session()
 
+            # Helper function to convert empty string to None
+            def convert_to_int_or_none(value):
+                try:
+                    return int(value) if value and value.strip() else None
+                except ValueError:
+                    return None
+
             if self.existing_allocation:
                 # Update existing allocation
                 allocation = session.query(ShopAllocation).filter_by(id=self.existing_allocation.id).first()
@@ -227,10 +257,10 @@ class CreateShopAllocationView(ttk.Frame):
                 
                 allocation.shop_profile_id = int(self.shop_profile_id.get())
                 allocation.renter_profile_id = int(self.renter_profile_id.get())
-                allocation.from_year = self.from_year.get()
-                allocation.from_month = self.from_month.get()
-                allocation.to_year = self.to_year.get()
-                allocation.to_month = self.to_month.get()
+                allocation.from_year = convert_to_int_or_none(self.from_year.get())
+                allocation.from_month = convert_to_int_or_none(self.from_month.get())
+                allocation.to_year = convert_to_int_or_none(self.to_year.get())
+                allocation.to_month = convert_to_int_or_none(self.to_month.get())
                 allocation.close_status = self.close_status.get()
                 
                 message = "Shop allocation updated successfully!"
@@ -239,30 +269,27 @@ class CreateShopAllocationView(ttk.Frame):
                 new_allocation = ShopAllocation(
                     shop_profile_id=int(self.shop_profile_id.get()),
                     renter_profile_id=int(self.renter_profile_id.get()),
-                    from_year=self.from_year.get(),
-                    from_month=self.from_month.get(),
-                    to_year=self.to_year.get(),
-                    to_month=self.to_month.get(),
+                    from_year=convert_to_int_or_none(self.from_year.get()),
+                    from_month=convert_to_int_or_none(self.from_month.get()),
+                    to_year=convert_to_int_or_none(self.to_year.get()),
+                    to_month=convert_to_int_or_none(self.to_month.get()),
                     close_status=self.close_status.get()
                 )
                 session.add(new_allocation)
                 message = "Shop allocation added successfully!"
 
             session.commit()
-            session.close()
-
-            ttk.dialogs.Messagebox.show_info(
-                message=message, 
-                title="Success", 
-                parent=self
-            )
+            ttk.dialogs.Messagebox.show_info(message=message, title="Success", parent=self)
             self.clear_form()
         except Exception as e:
+            session.rollback()
             ttk.dialogs.Messagebox.show_error(
                 message=f"Error saving shop allocation: {str(e)}", 
                 title="Error", 
                 parent=self
             )
+        finally:
+            session.close()
 
     def clear_form(self):
         """Clear all form fields."""

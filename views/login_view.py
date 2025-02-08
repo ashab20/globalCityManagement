@@ -4,6 +4,8 @@ from models.user import User
 from werkzeug.security import check_password_hash
 from PIL import Image, ImageTk
 import os
+from sqlalchemy.orm import Session
+from sqlalchemy.orm.session import sessionmaker
 
 
 class LoginView(ttk.Frame):
@@ -113,18 +115,50 @@ class LoginView(ttk.Frame):
             self.error_label.config(text="Please enter both username and password")
             return
         
-        # Find user
-        user = User.find_by_username(username)
-        print(f"User: {user}")
-        print(check_password_hash(user.password, password))
-        # if not user or not check_password_hash(user.password, password):
-        #     self.error_label.config(text="Invalid username or password")
-        #     return
+        try:
+            # Debug: Print input credentials
+            print(f"Login attempt - Username: {username}")
+            
+            # Use find_by_username method
+            user = User.find_by_username(username)
+            
+            # Debug: Print user details
+            if user:
+                print(f"User found: {user.login_id}, {user.usr_full_name}, {user.email}")
+                print(f"Stored password hash: {user.password}")
+                print(f"User role: {user.get_role_name()}")
+            else:
+                print(f"No user found with login_id: {username}")
+            
+            if not user:
+                self.error_label.config(text="Invalid username or password")
+                return
+            
+            # Debug: Check password
+            from werkzeug.security import check_password_hash
+            is_password_correct = check_password_hash(user.password, password)
+            print(f"Password check result: {is_password_correct}")
+            
+            if not is_password_correct:
+                self.error_label.config(text="Invalid username or password")
+                return
+            
+            # Check user is active
+            if not user.is_active:
+                self.error_label.config(text="User account is not active")
+                return
+            
+            # Clear error
+            self.error_label.config(text="")
+            
+            # Call login callback
+            if self.on_login:
+                self.on_login(user)
         
-        # Clear error
-        self.error_label.config(text="")
-        
-        # Call login callback
-        if self.on_login:
-            self.on_login()
-    
+        except Exception as e:
+            # Detailed error logging
+            print(f"Login error: {e}")
+            print(f"Error type: {type(e)}")
+            import traceback
+            traceback.print_exc()
+            self.error_label.config(text=f"Login error: {str(e)}")

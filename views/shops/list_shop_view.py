@@ -254,8 +254,8 @@ class ListShopView(ttk.Frame):
                         shop.shop_no,
                         shop.descreption,
                         shop.rent_amout,
-                        shop.shop_type,
-                        shop.status
+                        shop.rent_type,
+                        shop.active_status
                     )
                 )
                 self.tree.item(item, tags=(shop.id,))  # Store shop ID in tag

@@ -13,21 +13,19 @@ from views.shopRenters.create_renter_view import CreateShopRenterView
 from views.shopRenters.list_renter_view import ShopRenterListView
 from views.shopAllocation.create_shop_allocation_view import CreateShopAllocationView
 from views.shopAllocation.list_shop_allocation_view import ListShopAllocationView
-from views.bankAccount.create_bank_account_view import CreateBankAccountView
-from views.bankAccount.list_of_bank_account_view import ListOfBankAccountView
-from views.journalVoucher.create_journal_voucher import CreateJournalVoucherView
-from views.journalVoucher.journal_voucher_list import ListOfJournalVoucherView
-from views.utilities.create_utilities import CreateUtilitySettingView
-from views.utilities.utilities_list import ListOfUtilitySettingsView
 from PIL import Image, ImageTk
 import os
+from models.role_permissions import RolePermission
+from models.user import User
+from utils.database import Session
 
 
 class DashboardView(ttk.Frame):
-    def __init__(self, parent, on_logout=None):
+    def __init__(self, parent, current_user=None, on_logout=None):
         super().__init__(parent)
         self.parent = parent
         self.on_logout = on_logout
+        self.current_user = current_user
         
         # Create main container
         self.container = ttk.Frame(self, style="TFrame")
@@ -43,7 +41,7 @@ class DashboardView(ttk.Frame):
         self.show_welcome()
     
     def create_menu(self):
-        """Creates the main menu bar."""
+        """Creates the main menu bar with role-based access control."""
         # Configure menu colors
         self.parent.option_add('*Menu.background', '#f8f9fa')
         self.parent.option_add('*Menu.foreground', '#212529')
@@ -57,43 +55,55 @@ class DashboardView(ttk.Frame):
         menubar = Menu(self.parent)
         self.parent.config(menu=menubar)
         
+        # Get user role and permissions
+        user_role = self.get_user_role()
+        user_permissions = self.get_user_permissions(user_role)
+        print(f"User role: {user_role} , Permissions: {user_permissions}")
+
         # User Management Menu
-        user_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="User Management", menu=user_menu)
-        user_menu.add_command(label="Create User", command=self.create_user)
-        user_menu.add_command(label="List Users", command=self.list_users)
-        # user_menu.add_separator()
-        # user_menu.add_command(label="Create Role", command=self.create_role)
+        if user_permissions.get('user_management'):
+            user_menu = Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="User Management", menu=user_menu)
+            
+            if 'create' in user_permissions['user_management']:
+                user_menu.add_command(label="Create User", command=self.create_user)
+            
+            if 'read' in user_permissions['user_management']:
+                user_menu.add_command(label="List Users", command=self.list_users)
         
         # Shop Management Menu
-        shop_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Shop Management", menu=shop_menu)
-        shop_menu.add_command(label="Create Shop", command=self.create_shop)
-        shop_menu.add_command(label="List Shops", command=self.list_shops)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Owner", command=self.create_shop_owner)
-        shop_menu.add_command(label="List Shop Owners", command=self.list_shop_owners)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Renter", command=self.create_shop_renter)
-        shop_menu.add_command(label="List Shop Renters", command=self.list_shop_renters)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Allocation", command=self.create_shop_allocation)
-        shop_menu.add_command(label="List Shop Allocations", command=self.list_shop_allocations)
+        if user_permissions.get('shop_management'):
+            shop_menu = Menu(menubar, tearoff=0)
+            menubar.add_cascade(label="Shop Management", menu=shop_menu)
+            
+            # Shop Submenu
+            if 'create' in user_permissions['shop_management']:
+                shop_menu.add_command(label="Create Shop", command=self.create_shop)
+            
+            if 'read' in user_permissions['shop_management']:
+                shop_menu.add_command(label="List Shops", command=self.list_shops)
+            
+            # Shop Owner Submenu
+            if 'create' in user_permissions.get('shop_owner_management', []):
+                shop_menu.add_command(label="Create Shop Owner", command=self.create_shop_owner)
+            
+            if 'read' in user_permissions.get('shop_owner_management', []):
+                shop_menu.add_command(label="List Shop Owners", command=self.list_shop_owners)
+            
+            # Shop Renter Submenu
+            if 'create' in user_permissions.get('shop_renter_management', []):
+                shop_menu.add_command(label="Create Shop Renter", command=self.create_shop_renter)
+            
+            if 'read' in user_permissions.get('shop_renter_management', []):
+                shop_menu.add_command(label="List Shop Renters", command=self.list_shop_renters)
+            
+            # Shop Allocation Submenu
+            if 'create' in user_permissions.get('shop_allocation_management', []):
+                shop_menu.add_command(label="Create Shop Allocation", command=self.create_shop_allocation)
+            
+            if 'read' in user_permissions.get('shop_allocation_management', []):
+                shop_menu.add_command(label="List Shop Allocations", command=self.list_shop_allocations)
         
-
-        # Account Management Menu
-        account_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Account Management", menu=account_menu)
-        account_menu.add_command(label="Create Bank Account", command=self.create_bank_account)
-        account_menu.add_command(label="Bank Accounts List", command=self.list_bank_accounts)
-        account_menu.add_separator()
-        account_menu.add_command(label="Create Journal Voucher", command=self.create_journal_voucher)
-        account_menu.add_command(label="Journal Vouchers List", command=self.list_journal_voucher)
-        account_menu.add_separator()
-        account_menu.add_command(label="Create Utility", command=self.create_utilities)
-        account_menu.add_command(label="Utilities List", command=self.list_utilities)
-        account_menu.add_separator()
-
         # Help Menu
         help_menu = Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
@@ -101,6 +111,49 @@ class DashboardView(ttk.Frame):
         
         # Logout Menu (right-aligned)
         menubar.add_command(label="Logout", command=self.on_logout)
+    
+    def get_user_role(self):
+        """
+        Retrieve the user's role from the database.
+        
+        :return: Role name as a string, default to 'User' if not found
+        """
+        if not self.current_user:
+            return 'User'
+        
+        try:
+            session = Session()
+            user = session.query(User).filter_by(id=self.current_user.id).first()
+            role = user.get_role_name() if user else 'User'
+            session.close()
+            return role
+        except Exception:
+            return 'User'
+    
+    def get_user_permissions(self, role):
+        """
+        Retrieve permissions for the given role.
+        
+        :param role: Role name
+        :return: Dictionary of permissions
+        """
+        try:
+            session = Session()
+            role_permission = session.query(RolePermission).filter_by(role_name=role).first()
+            
+            if not role_permission:
+                # If no role permission found, use default
+                default_permissions = RolePermission.get_default_permissions()
+                permissions = default_permissions.get(role, default_permissions['User'])
+            else:
+                permissions = role_permission.permissions
+            
+            session.close()
+            return permissions
+        except Exception:
+            # Fallback to User permissions
+            default_permissions = RolePermission.get_default_permissions()
+            return default_permissions['User']
     
     def show_welcome(self):
         """Shows welcome message."""
@@ -179,27 +232,3 @@ class DashboardView(ttk.Frame):
             message="Global City Management System\nVersion 1.0\n\nDeveloped by BITPOINT TECHNOLOGIES LTD.",
             parent=self
         )
-
-    def create_bank_account(self):
-        """Opens create bank account window."""
-        self.window_manager.create_window("Create Bank Account", CreateBankAccountView)
-    
-    def list_bank_accounts(self):
-        """Opens list bank accounts window."""
-        self.window_manager.create_window("Bank Account List", ListOfBankAccountView)
-
-    def create_journal_voucher(self):
-        """Opens create journal voucher window."""
-        self.window_manager.create_window("Create Journal Voucher", CreateJournalVoucherView)
-
-    def list_journal_voucher(self):
-        """Opens list journal vouchers window."""
-        self.window_manager.create_window("Journal Voucher List", ListOfJournalVoucherView)
-
-    def create_utilities(self):
-        """Opens create utilities window."""
-        self.window_manager.create_window("Create Utilities", CreateUtilitySettingView)
-
-    def list_utilities(self):
-        """Opens list utilities window."""
-        self.window_manager.create_window("Utilities List", ListOfUtilitySettingsView)
