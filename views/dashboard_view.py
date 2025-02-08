@@ -15,10 +15,13 @@ from views.shopAllocation.create_shop_allocation_view import CreateShopAllocatio
 from views.shopAllocation.list_shop_allocation_view import ListShopAllocationView
 from views.bankAccount.create_bank_account_view import CreateBankAccountView
 from views.bankAccount.list_of_bank_account_view import ListOfBankAccountView
+from views.bankAccount.list_bank_account_view import ListBankAccountView
 from views.journalVoucher.create_journal_voucher import CreateJournalVoucherView
 from views.journalVoucher.journal_voucher_list import ListOfJournalVoucherView
+from views.journalVoucher.list_journal_voucher_view import ListJournalVoucherView
 from views.utilities.create_utilities import CreateUtilitySettingView
 from views.utilities.utilities_list import ListOfUtilitySettingsView
+from views.utilities.list_utilities_view import ListUtilitiesView
 from PIL import Image, ImageTk
 import os
 
@@ -85,13 +88,13 @@ class DashboardView(ttk.Frame):
         account_menu = Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Account Management", menu=account_menu)
         account_menu.add_command(label="Create Bank Account", command=self.create_bank_account)
-        account_menu.add_command(label="Bank Accounts List", command=self.list_bank_accounts)
+        account_menu.add_command(label="List Bank Accounts", command=self.list_bank_accounts)
         account_menu.add_separator()
         account_menu.add_command(label="Create Journal Voucher", command=self.create_journal_voucher)
-        account_menu.add_command(label="Journal Vouchers List", command=self.list_journal_voucher)
+        account_menu.add_command(label="List Journal Vouchers", command=self.list_journal_vouchers)
         account_menu.add_separator()
         account_menu.add_command(label="Create Utility", command=self.create_utilities)
-        account_menu.add_command(label="Utilities List", command=self.list_utilities)
+        account_menu.add_command(label="List Utilities", command=self.list_utilities)
         account_menu.add_separator()
 
         # Help Menu
@@ -185,21 +188,30 @@ class DashboardView(ttk.Frame):
         self.window_manager.create_window("Create Bank Account", CreateBankAccountView)
     
     def list_bank_accounts(self):
-        """Opens list bank accounts window."""
-        self.window_manager.create_window("Bank Account List", ListOfBankAccountView)
+        """Open the list bank accounts view."""
+        list_bank_accounts_window = ttk.Toplevel(title="Bank Accounts")
+        list_bank_accounts_window.geometry("800x600")
+        list_view = ListBankAccountView(list_bank_accounts_window)
+        list_view.pack(fill="both", expand=True)
 
     def create_journal_voucher(self):
         """Opens create journal voucher window."""
         self.window_manager.create_window("Create Journal Voucher", CreateJournalVoucherView)
 
-    def list_journal_voucher(self):
-        """Opens list journal vouchers window."""
-        self.window_manager.create_window("Journal Voucher List", ListOfJournalVoucherView)
+    def list_journal_vouchers(self):
+        """Open the list journal vouchers view."""
+        list_journal_vouchers_window = ttk.Toplevel(title="Journal Vouchers")
+        list_journal_vouchers_window.geometry("800x600")
+        list_view = ListJournalVoucherView(list_journal_vouchers_window)
+        list_view.pack(fill="both", expand=True)
 
     def create_utilities(self):
         """Opens create utilities window."""
         self.window_manager.create_window("Create Utilities", CreateUtilitySettingView)
 
     def list_utilities(self):
-        """Opens list utilities window."""
-        self.window_manager.create_window("Utilities List", ListOfUtilitySettingsView)
+        """Open the list utilities view."""
+        list_utilities_window = ttk.Toplevel(title="Utilities")
+        list_utilities_window.geometry("800x600")
+        list_view = ListUtilitiesView(list_utilities_window)
+        list_view.pack(fill="both", expand=True)
