@@ -598,6 +598,8 @@ class CreateBillCollectionView(Frame):
     def save_collection(self, data, bill_particulars):
         session = Session()
         try:
+            bank_id = self.bank_dict.get(data['bank_name']) if data['trans_mode'] == 'Bank' else None
+            
             # Start transaction
             session.begin()
             print('data before collection',data)
@@ -613,7 +615,7 @@ class CreateBillCollectionView(Frame):
                 bill_id=int(data['bill_id']),
                 trans_date=data['trans_date'],
                 trans_mode=data['trans_mode'],
-                bank_id=self.bank_dict.get(data['bank_name']) if data['trans_mode'] == 'Bank' else None,
+                bank_id=bank_id,
                 check_no=data['check_no'],
                 trans_amount=Decimal(data['trans_amount']),
                 pay_amount=Decimal(self.total_paid.get() or 0),
@@ -653,6 +655,52 @@ class CreateBillCollectionView(Frame):
                         )
                         session.add(coll_particular)
                         total_paid += pay_now
+                        # continue
+
+                        # ? INSERT TO ACCOUNTING TABLE
+                        drHeadId = crHeadId = crHeadId2 = 0
+
+                        # print('data',int(data['bank_id']))
+
+                        if data['trans_mode'] == 'Cash':
+                            drHeadId = 4  # Cash Head ID
+                        else:
+                            bank_id = self.bank_dict.get(data['bank_name'])
+                            head = session.query(AccHeadOfAccounts).filter_by(bank_id=bank_id).first()
+                            drHeadId = head.id if head else 1 
+
+                        if particular.bill_particular == "House Rent":
+                            self.insert_house_rent_to_accounting(session, collection, pay_now, data)
+                            continue
+                        elif particular.bill_particular == "Common Areal Maintenance":
+                            crHeadId = 28
+                        elif particular.bill_particular == "Electricity":
+                           crHeadId = 7
+                        elif particular.bill_particular == "Gas":
+                            crHeadId = 9
+                        elif particular.bill_particular == "WASA":
+                            crHeadId = 8
+                        elif particular.bill_particular == "Internet":
+                            crHeadId = 10
+
+                        # Collection Debit Entry
+                        AccountingController.manage_transaction(session, [
+                            "+", "insert", drHeadId, collection.id,
+                            collection.trans_date, pay_now, 
+                            bank_id, '1', None,
+                            "bill_colct_id", collection.id,
+                            "dr", "Bill Collection - Debit"
+                        ])
+
+                        # Rent Income Credit Entry
+                        AccountingController.manage_transaction(session, [
+                            "-", "insert", crHeadId, collection.id,
+                            collection.trans_date, pay_now, 
+                            None, '1', None,
+                            "bill_colct_id", collection.id,
+                            "cr", "Bill Collection - Credit"
+                        ])
+                        
                 except (ValueError, TypeError, AttributeError) as e:
                     print(f"Error processing row {idx}: {str(e)}")
                     continue
@@ -684,31 +732,6 @@ class CreateBillCollectionView(Frame):
         finally:
             session.close()
 
-    def create_accounting_entries(self, session, collection, amount, data):
-        # Determine debit head based on payment mode
-        if data['trans_mode'] == 'Cash':
-            dr_head = 1  # Cash Head ID
-        else:
-            bank = session.query(BankAccount).filter_by(bank_name=data['bank_name']).first()
-            dr_head = bank.head_id if bank else 1
-
-        # Collection Debit Entry
-        AccountingController.manage_transaction(session, [
-            "+", "insert", dr_head, collection.id,
-            collection.trans_date, amount, 
-            collection.bank_id, '1', None,
-            "bill_colct_id", collection.id,
-            "dr", "Bill Collection - Debit"
-        ])
-
-        # Rent Income Credit Entry
-        AccountingController.manage_transaction(session, [
-            "+", "insert", 21, collection.id,  # Assuming 21 is Rent Income Head
-            collection.trans_date, amount, 
-            None, '1', None,
-            "bill_colct_id", collection.id,
-            "cr", "Bill Collection - Credit"
-        ])
 
     def show_previous_form(self):
         self.collection_form.destroy()
@@ -719,10 +742,94 @@ class CreateBillCollectionView(Frame):
 
     # House Rent
     def insert_house_rent_to_accounting(self, session, collection, amount, data):
+
+        # ? INSERT TO ACCOUNTING TABLE
+        drHeadId, crHeadId, tdsDrHeadId, drRentPrvHeadId = 7, 6, 35, 21  
+        tdsCrHeadId, crRentRevenueHeadId, crPaybleOwnerHeadId = 22, 16, 11
+        bank_id = self.bank_dict.get(data['bank_name']) if data['trans_mode'] == 'Bank' else None
+
         # Determine debit head based on payment mode
         if data['trans_mode'] == 'Cash':
-            dr_head = 1  # Cash Head ID
+            drHeadId = 4  # Cash Head ID
         else:
-            bank = session.query(BankAccount).filter_by(bank_name=data['bank_name']).first()
-            dr_head = bank.head_id if bank else 1
-            
+            bank_id = self.bank_dict.get(data['bank_name'])
+            head = session.query(AccHeadOfAccounts).filter_by(bank_id=bank_id).first()
+            drHeadId = head.id if head else 1 
+        # 1st
+
+        tdsOfficeRentAmount = amount * 0.05 # 5%
+        cashOrBankAmount = amount * 0.95 # 95%
+        receivableHeadForRent = amount
+
+        # Collection Debit Entry
+        # ? INSERT TO THE BANK HEAD OR CASH HEAD @DEBIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", drHeadId, collection.id,
+            collection.trans_date, cashOrBankAmount, 
+            bank_id, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
+        # ? INSERT TO THE TDS HEAD @DEBIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", tdsDrHeadId, collection.id,
+            collection.trans_date, tdsOfficeRentAmount, 
+            bank_id, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
+        # ? INSERT TO RECEIVABLE HEAD FOR RENT @CREDIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", crHeadId, collection.id,
+            collection.trans_date, receivableHeadForRent, 
+            drHeadId, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - CREDIT"
+        ])
+
+        # 2nd
+
+
+        provisionalOfficeRentAmount = amount
+        prvTDSOfficeRentAmount = amount * 0.05 # 5%
+        revenueRentCommission = amount * 0.05 # 5%
+        payableToOwner = amount * 0.90 # 90%
+
+        # ? Provisional for rent @DEBIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", drRentPrvHeadId, collection.id,
+            collection.trans_date, provisionalOfficeRentAmount, 
+            bank_id, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
+        # ? TDS FOR RENT @CREDIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", tdsCrHeadId, collection.id,
+            collection.trans_date, prvTDSOfficeRentAmount, 
+            None, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
+        # ? REVENUE FOR RENT COMMISSION @CREDIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", crRentRevenueHeadId, collection.id,
+            collection.trans_date, revenueRentCommission, 
+            None, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
+        # ? PAYABLE TO OWNER @CREDIT
+        AccountingController.manage_transaction(session, [
+            "+", "insert", crPaybleOwnerHeadId, collection.id,
+            collection.trans_date, payableToOwner, 
+            None, '1', None,
+            "bill_colct_id", collection.id,
+            "dr", "Bill Collection - Debit"
+        ])
+
