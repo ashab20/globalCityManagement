@@ -1,0 +1,12 @@
+Billing Information
+
+
+
+- After add to the particular draft data is showing. when want to remove any single particular. data is remove but the totall calculation is not counting showing 0.0
+- On Change any data of particular it's not changing on the database and also the ui.
+
+
+Shop select 
+Select collection with month and date
+
+
