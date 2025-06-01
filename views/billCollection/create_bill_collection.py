@@ -665,7 +665,6 @@ class CreateBillCollectionView(Frame):
                         if data['trans_mode'] == 'Cash':
                             drHeadId = 4  # Cash Head ID
                         else:
-                            bank_id = self.bank_dict.get(data['bank_name'])
                             head = session.query(AccHeadOfAccounts).filter_by(bank_id=bank_id).first()
                             drHeadId = head.id if head else 1 
 
