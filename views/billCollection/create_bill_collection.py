@@ -12,6 +12,7 @@ from models.bill_due import BillDue
 from models.bill_particular import BillParticular
 import traceback
 from models.bill_collection import BillCollection
+from models.shop_allocation import ShopAllocation
 from ttkbootstrap.dialogs import Messagebox
 from controllers.accounting_controller import AccountingController
 from decimal import Decimal
@@ -609,6 +610,10 @@ class CreateBillCollectionView(Frame):
                 Messagebox.show_error("Bill collection already exists", "Error")
                 return
             
+            shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(session,data['shop_id'], year=data['bill_year'], month=data['bill_month'])
+            # if not shop_allocation:
+            #     raise ValueError("No shop allocation found for the selected shop/month/year.")
+            
             # Create BillCollection entry
             collection = BillCollection(
                 shop_id=int(data['shop_id']),
@@ -628,6 +633,14 @@ class CreateBillCollectionView(Frame):
 
             total_paid = Decimal('0')
             print('len:',len(bill_particulars))
+
+            # tenant profile by shop_id
+            # # tenant_profile = session.query(ShopProfile).filter_by(shop_id=data['shop_id']).first()
+            shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(data['shop_id'], year=data['trans_date'].year, month=data['trans_date'].month)
+            # if shop_allocation:
+            #     renter_profile_id = shop_allocation.renter_profile_id
+            # else:
+            #     renter_profile_id = None
             
             # ? UPDATE BILL PARTICULARS AND CREATE COLLECTION PARTICULARS
             for idx, particular in enumerate(bill_particulars):
@@ -671,7 +684,7 @@ class CreateBillCollectionView(Frame):
                         if particular.bill_particular == "House Rent":
                             self.insert_house_rent_to_accounting(session, collection, pay_now, data)
                             continue
-                        elif particular.bill_particular == "Common Areal Maintenance":
+                        elif particular.bill_particular == "Common Area Maintenance":
                             crHeadId = 28
                         elif particular.bill_particular == "Electricity":
                            crHeadId = 7
@@ -690,6 +703,19 @@ class CreateBillCollectionView(Frame):
                             "bill_colct_id", collection.id,
                             "dr", "Bill Collection - Debit"
                         ])
+
+                        # # ? INSERT TO TEANANT TRANS HISTORY
+                        AccountingController.insert_teanant_trans_history(
+                            session,
+                            shop_allocation.renter_profile_id,
+                            collection.id, None, 
+                            collection.trans_date, 
+                            pay_now, "cr", 
+                            pay_now, 
+                            "dr", 
+                            f"Bill Collection - Debit", 
+                            "1"
+                        )
 
                         # Rent Income Credit Entry
                         AccountingController.manage_transaction(session, [

@@ -40,7 +40,7 @@ from views.accounting.balance_sheet import BalanceSheetView
 from views.accounting.profit_loss import ProfitLossView
 from views.billCollection.create_bill_collection import CreateBillCollectionView
 from controllers.accounting_controller import AccountingController
-# from views.billCollection import CollectionListView
+from views.billCollection.bill_collection_list import CollectionListView
 # from sqlalchemy.orm import Session
 
 

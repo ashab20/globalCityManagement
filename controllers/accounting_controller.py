@@ -8,6 +8,7 @@ from models.ledger_current import LedgerCurrent
 from models.ledger_history import LedgerHistory
 from decimal import Decimal
 from datetime import datetime
+from models.teanant_trans_history import TeanantTransHistory
 from data.common_head_data import common_head_data as commonHeadData
 
 class AccountingController:
@@ -16,7 +17,7 @@ class AccountingController:
     def manage_ledger_current(session: Session, head_id: int, amount: float, drcr_type: str):
         try:
             ledger = session.query(LedgerCurrent).filter_by(head_id=head_id).first()
-            print("ledger",ledger)
+            # print("ledger",ledger)
             if not ledger:
                 ledger = LedgerCurrent(head_id=head_id, amount=Decimal(str(amount)), drcr_type=drcr_type)
                 session.add(ledger)
@@ -34,8 +35,8 @@ class AccountingController:
             # Re-insert all from ledger_current into ledger_history
             # all_ledgers = session.query(LedgerHistory).all()
             # print("all_ledgers",all_ledgers)
-            # if all_ledgers:
-            #     for entry in all_ledgers:
+            # if ledger:
+            #     for entry in ledger:
             #         history = LedgerHistory(
             #             head_id=entry.head_id,
             #             amount=entry.amount,
@@ -251,5 +252,22 @@ class AccountingController:
             if head["name"] == name:
                 cd_type.append(head)
         return cd_type
+    
+    @staticmethod
+    def insert_teanant_trans_history(session: Session, teanant_id: int, bill_info_id: int, collect_id: int, trans_dt: datetime, trans_amount: float, crdr_type: str, closing_amt: float, closing_crdr_type: str, remarks: str, entry_user: str):
+        teanant_trans_history = TeanantTransHistory(
+            teanant_id=teanant_id,
+            bill_info_id=bill_info_id,
+            collect_id=collect_id,
+            trans_dt=trans_dt,
+            trans_amount=trans_amount,
+            crdr_type=crdr_type,
+            closing_amt=closing_amt,
+            closing_crdr_type=closing_crdr_type,
+            remarks=remarks,
+            entry_user=entry_user
+        )
+        session.add(teanant_trans_history)
+        return teanant_trans_history
 
         

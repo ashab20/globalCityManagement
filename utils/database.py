@@ -53,6 +53,7 @@ def import_all_models():
         from models.BankAccount import BankAccount
         from models.JournalVoucher import JournalVoucher
         from models.UtilitySetting import UtilitySetting
+        from models.teanant_trans_history import TeanantTransHistory
         
         print("All models imported successfully.")
     except ImportError as e:

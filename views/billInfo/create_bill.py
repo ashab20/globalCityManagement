@@ -9,6 +9,7 @@ from datetime import datetime, date
 from models.shop_profile import ShopProfile
 from models.UtilitySetting import UtilitySetting
 from models.bill_particular_draft import BillParticularDraft
+from models.shop_allocation import ShopAllocation
 from functools import partial
 import traceback
 from controllers.accounting_controller import AccountingController
@@ -962,6 +963,12 @@ class CreateBillInfoView(ttk.Frame):
                 total_amount = BillParticularDraft.get_total_draft_amount(shop_id, bill_month, bill_year)
                 if total_amount is None:
                     raise ValueError("No draft amount found for the selected shop/month/year.")
+                
+                # tenant profile by shop_id
+                # tenant_profile = session.query(ShopProfile).filter_by(shop_id=data['shop_id']).first()
+                shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(session,shop_id, year=bill_year, month=bill_month)
+                if not shop_allocation:
+                    raise ValueError("No shop allocation found for the selected shop/month/year.")
 
                 bill_info = BillInfo(
                     shop_id=shop_id,
@@ -1028,6 +1035,10 @@ class CreateBillInfoView(ttk.Frame):
                             "+", "insert", drHeadId, bill_info.id, date.today(), draft.sub_amount,
                             None, '1', None, "bill_info_id", bill_info.id, "cr", f"Bill Bill Generations for {draft.bill_particular}-cr"
                         ])
+
+                        # ? INSERT TO TEANANT TRANS HISTORY
+                        AccountingController.insert_teanant_trans_history(session, shop_allocation.renter_profile_id, bill_info.id, None, date.today(), draft.sub_amount, "dr", draft.sub_amount, "cr", f"Bill Generations for {draft.bill_particular}-dr", "1")
+
                         AccountingController.manage_transaction(session, [
                             "+", "insert", crHeadId, bill_info.id, date.today(), draft.sub_amount,
                             None, '1', None, "bill_info_id", bill_info.id, "dr", f"Bill Generations for {draft.bill_particular}-dr"

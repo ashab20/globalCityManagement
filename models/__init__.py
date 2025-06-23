@@ -36,6 +36,7 @@ __all__ = [
     'BillParticular',
     'BankAccount',
     'BillInfo',
+    'TeanantTransHistory',
     'JournalVoucher',
     'UtilitySetting',
     'AccountJournal'
