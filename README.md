@@ -47,7 +47,7 @@ python main.py
 - Verify Python version compatibility
 
 ## License
-[Your License Information]
+MIT
 
 ## Contributors
-[Your Name/Organization]
+BITPOINT TECHNOGOLGIES LTD
