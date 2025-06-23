@@ -14,7 +14,7 @@ class User(Base):
     email = Column(String(100), unique=True, nullable=False)
     phone = Column(String(20), nullable=False)
     password = Column(String(255), nullable=False)
-    role_id = Column(Integer, ForeignKey("user_roles.id"), nullable=False)
+    role_id = Column(Integer, ForeignKey("user_role.id"), nullable=False)
     avatar = Column(LargeBinary, nullable=True)
     ptext = Column(String(255), nullable=True)
     created_by = Column(Integer, nullable=True)

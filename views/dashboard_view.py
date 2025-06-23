@@ -5,6 +5,7 @@ from utils.window_manager import WindowManager
 from views.users.create_user_view import CreateUserView
 from views.users.list_user_view import ListUserView
 from views.users.create_role_view import CreateRoleView
+from views.users.list_role_view import ListRoleView
 from views.shops.create_shop_view import CreateShopView
 from views.shops.list_shop_view import ListShopView
 from views.shopOwner.create_shop_owner_view import CreateShopOwnerView
@@ -14,23 +15,41 @@ from views.shopRenters.list_renter_view import ShopRenterListView
 from views.shopAllocation.create_shop_allocation_view import CreateShopAllocationView
 from views.shopAllocation.list_shop_allocation_view import ListShopAllocationView
 from views.bankAccount.create_bank_account_view import CreateBankAccountView
-from views.bankAccount.list_of_bank_account_view import ListOfBankAccountView
 from views.bankAccount.list_bank_account_view import ListBankAccountView
 from views.journalVoucher.create_journal_voucher import CreateJournalVoucherView
-from views.journalVoucher.journal_voucher_list import ListOfJournalVoucherView
 from views.journalVoucher.list_journal_voucher_view import ListJournalVoucherView
-from views.utilities.create_utilities import CreateUtilitySettingView
 from views.utilities.utilities_list import ListOfUtilitySettingsView
 from views.utilities.list_utilities_view import ListUtilitiesView
+from views.utilities.create_utilities import CreateUtilitySettingView
+from views.role_permission.set_role_permission import SetRolePermissionView
+from views.role_permission.role_permission_list import RolePermissionDetails
+from views.billInfo.create_bill import CreateBillInfoView
+from views.billInfo.bill_info_list import BillInfoListView
 from PIL import Image, ImageTk
 import os
+from models.role_permissions import RolePermission
+from models.user import User
+from utils.database import Session
+from models.url_top_menu import UrlTopMenu
+from models.url_sub_menu import UrlSubMenu
+from views.billInfo.create_particular import CreateParticularView
+from views.billInfo.particular_list import ParticularListView
+from views.accounting.trial_balance import TrialBalanceView
+from views.accounting.ledger_balance import LedgerBalanceView
+from views.accounting.balance_sheet import BalanceSheetView
+from views.accounting.profit_loss import ProfitLossView
+from views.billCollection.create_bill_collection import CreateBillCollectionView
+from controllers.accounting_controller import AccountingController
+from views.billCollection.bill_collection_list import CollectionListView
+# from sqlalchemy.orm import Session
 
 
 class DashboardView(ttk.Frame):
-    def __init__(self, parent, on_logout=None):
+    def __init__(self, parent, current_user=None, on_logout=None):
         super().__init__(parent)
         self.parent = parent
         self.on_logout = on_logout
+        self.current_user = current_user
         
         # Create main container
         self.container = ttk.Frame(self, style="TFrame")
@@ -46,7 +65,7 @@ class DashboardView(ttk.Frame):
         self.show_welcome()
     
     def create_menu(self):
-        """Creates the main menu bar."""
+        """Creates the main menu bar with role-based access control."""
         # Configure menu colors
         self.parent.option_add('*Menu.background', '#f8f9fa')
         self.parent.option_add('*Menu.foreground', '#212529')
@@ -60,76 +79,193 @@ class DashboardView(ttk.Frame):
         menubar = Menu(self.parent)
         self.parent.config(menu=menubar)
         
-        # User Management Menu
-        user_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="User Management", menu=user_menu)
-        user_menu.add_command(label="Create User", command=self.create_user)
-        user_menu.add_command(label="List Users", command=self.list_users)
-        # user_menu.add_separator()
-        # user_menu.add_command(label="Create Role", command=self.create_role)
-        
-        # Shop Management Menu
-        shop_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Shop Management", menu=shop_menu)
-        shop_menu.add_command(label="Create Shop", command=self.create_shop)
-        shop_menu.add_command(label="List Shops", command=self.list_shops)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Owner", command=self.create_shop_owner)
-        shop_menu.add_command(label="List Shop Owners", command=self.list_shop_owners)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Renter", command=self.create_shop_renter)
-        shop_menu.add_command(label="List Shop Renters", command=self.list_shop_renters)
-        shop_menu.add_separator()
-        shop_menu.add_command(label="Create Shop Allocation", command=self.create_shop_allocation)
-        shop_menu.add_command(label="List Shop Allocations", command=self.list_shop_allocations)
-        
+        # Get user role and permissions
+        user_role = self.get_user_role()
+        user_permissions = self.get_user_permissions(user_role)
+        # print(f"User role: {user_role} , Permissions: {user_permissions}")
+       
 
-        # Account Management Menu
-        account_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Account Management", menu=account_menu)
-        account_menu.add_command(label="Create Bank Account", command=self.create_bank_account)
-        account_menu.add_command(label="List Bank Accounts", command=self.list_bank_accounts)
-        account_menu.add_separator()
-        account_menu.add_command(label="Create Journal Voucher", command=self.create_journal_voucher)
-        account_menu.add_command(label="List Journal Vouchers", command=self.list_journal_vouchers)
-        account_menu.add_separator()
-        account_menu.add_command(label="Create Utility", command=self.create_utilities)
-        account_menu.add_command(label="List Utilities", command=self.list_utilities)
-        account_menu.add_separator()
-
-        # Help Menu
-        help_menu = Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="About", command=self.show_about)
-        
-        # Logout Menu (right-aligned)
-        menubar.add_command(label="Logout", command=self.on_logout)
+    #   Dynamic Menu
+        menus = self.get_url_top_menu()
+        # print(menus)
+        for mt in menus:
+            print(mt.menu_name)
+            topMenu = Menu(menubar, tearoff=0)
+            menubar.add_cascade(label=mt.menu_name, menu=topMenu)
+            submenus = self.get_url_sub_menu(mt.id)
+            for sub in submenus:
+                try:
+                    # Convert command name to lowercase and replace spaces with underscores
+                    method_name = sub.command_name.lower().replace(' ', '_')
+                    menu_action = getattr(self, method_name)
+                    topMenu.add_command(label=sub.sub_menu_name, command=menu_action)
+                except AttributeError:
+                    print(f"Warning: Method {method_name} not found for menu item {sub.sub_menu_name}")
+                    continue
+       
     
-    def show_welcome(self):
-        """Shows welcome message."""
-        welcome_frame = ttk.Frame(self.container, style="TFrame")
-        welcome_frame.pack(pady=50)
+    def get_user_role(self):
+        """
+        Retrieve the user's role from the database.
         
-        # Load and display logo
+        :return: Role name as a string, default to 'User' if not found
+        """
+        if not self.current_user:
+            return 'User'
+        
+        try:
+            session = Session()
+            user = session.query(User).filter_by(id=self.current_user.id).first()
+            role = user.get_role_name() if user else 'User'
+            session.close()
+            return role
+        except Exception:
+            return 'User'
+    
+    def get_user_permissions(self, role):
+        """
+        Retrieve permissions for the given role.
+        
+        :param role: Role name
+        :return: Dictionary of permissions
+        """
+        try:
+            session = Session()
+            role_permission = session.query(RolePermission).filter_by(role_name=role).first()
+            # print(f"Role Permission for {role}: {role_permission}")
+            if not role_permission:
+                # If no role permission found, use default
+                default_permissions = RolePermission.get_default_permissions()
+                permissions = default_permissions.get(role, default_permissions['User'])
+            else:
+                permissions = role_permission.permissions
+            
+            session.close()
+            return permissions
+        except Exception:
+            # Fallback to User permissions
+            default_permissions = RolePermission.get_default_permissions()
+            return default_permissions['User']
+    
+    def get_url_top_menu(self):
+        try:
+            print("dynamic menu called")
+            session = Session()
+            # top_menu = session.query(UrlTopMenu).all()
+            # print(f"top menu: {top_menu}")
+
+            menu_top = session.query(UrlTopMenu).all() 
+            session.close()
+            return menu_top
+            
+        except Exception:
+            print("somerhing goes worn!")
+        
+    def get_url_sub_menu(self,id):
+        try:
+            print("dynamic menu called")
+            session = Session()
+            # top_menu = session.query(UrlTopMenu).all()
+            # print(f"top menu: {top_menu}")
+
+            menu_top = session.query(UrlSubMenu).filter_by(top_menu_id=id).all()
+            session.close()
+            return menu_top
+            
+        except Exception:
+            print("somerhing goes wrong!")
+    
+
+    ICON_MAP = {
+        'Users': 'users.png',
+        'Shop': 'shop.png',
+        'Reports': 'reports.png',
+        'Account': 'account.png',
+        'Help': 'help.png',
+        'Profile': 'profile.png',
+        'Utility': 'utility.png'
+        # Add more mappings as needed
+    }
+
+    def show_welcome(self):
+        """Shows welcome message and dashboard-style top menus."""
+        welcome_frame = ttk.Frame(self.container, style="TFrame")
+        welcome_frame.pack(pady=30, fill='both', expand=True)
+
+        # Show logo
         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images', 'logo.png')
-        logo_image = Image.open(logo_path)
-        # Resize logo to 300x100
-        logo_image = logo_image.resize((300, 100), Image.Resampling.LANCZOS)
+        logo_image = Image.open(logo_path).resize((300, 100), Image.Resampling.LANCZOS)
         self.logo_photo = ImageTk.PhotoImage(logo_image)
         
-        ttk.Label(
-            welcome_frame,
-            image=self.logo_photo,
-            style="TLabel"
-        ).pack(pady=(0, 30))
+        ttk.Label(welcome_frame, image=self.logo_photo, style="TLabel").pack(pady=(0, 20))
+
+        # Dashboard menu box container
+        dashboard_frame = ttk.Frame(welcome_frame)
+        dashboard_frame.pack()
+
+        try:
+            top_menus = self.get_url_top_menu()
+
+            for i, mt in enumerate(top_menus):
+                # Box per top menu
+                menu_box = ttk.LabelFrame(
+                    dashboard_frame,
+                    text=mt.menu_name,
+                    padding=10,
+                    style="TLabelframe"
+                )
+                menu_box.grid(row=i // 3, column=i % 3, padx=20, pady=15, sticky="nsew")
+
+                # Try to load icon for menu (optional)
+                icon_path = os.path.join('assets', 'icons', mt.icon or '')
+                if os.path.exists(icon_path):
+                    icon_image = Image.open(icon_path).resize((40, 40), Image.Resampling.LANCZOS)
+                    icon_photo = ImageTk.PhotoImage(icon_image)
+                    icon_label = ttk.Label(menu_box, image=icon_photo)
+                    icon_label.image = icon_photo  # keep a reference
+                    icon_label.pack(pady=(0, 5))
+
+                # Submenus as buttons
+                submenus = self.get_url_sub_menu(mt.id)
+                for sub in submenus:
+                    try:
+                        method_name = sub.command_name.lower().replace(' ', '_')
+                        menu_action = getattr(self, method_name)
+                        ttk.Button(menu_box, text=sub.sub_menu_name, command=menu_action).pack(pady=2, fill='x')
+                    except AttributeError:
+                        print(f"Method {method_name} not found for submenu {sub.sub_menu_name}")
+        except Exception as e:
+            print(f"Failed to show dashboard menus: {e}")
+
+
+    # def show_welcome(self):
+    #     """Shows welcome message."""
+    #     welcome_frame = ttk.Frame(self.container, style="TFrame")
+    #     welcome_frame.pack(pady=50)
         
-        ttk.Label(
-            welcome_frame,
-            text="Use the menu above to manage users and shops",
-            font=("Helvetica", 12),
-            bootstyle="secondary"
-        ).pack()
+    #     # Load and display logo
+    #     logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images', 'logo.png')
+    #     logo_image = Image.open(logo_path)
+    #     # Resize logo to 300x100
+    #     logo_image = logo_image.resize((300, 100), Image.Resampling.LANCZOS)
+    #     self.logo_photo = ImageTk.PhotoImage(logo_image)
+        
+    #     ttk.Label(
+    #         welcome_frame,
+    #         image=self.logo_photo,
+    #         style="TLabel"
+    #     ).pack(pady=(0, 30))
+        
+    #     ttk.Label(
+    #         welcome_frame,
+    #         text="Use the menu above to manage users and shops",
+    #         font=("Helvetica", 12),
+    #         bootstyle="secondary"
+    #     ).pack()
     
+
+    # !MENU FUNTIONS START
+
     def create_user(self):
         """Opens create user window."""
         self.window_manager.create_window("Create User", CreateUserView)
@@ -140,8 +276,23 @@ class DashboardView(ttk.Frame):
     
     def create_role(self):
         """Opens create role window."""
-        self.window_manager.create_window("Create Role", CreateRoleView)
-    
+        self.window_manager.create_window("New Role Form", CreateRoleView)
+
+    def role_list(self):
+        """Opens create role window."""
+        self.window_manager.create_window("Role List", ListRoleView)
+
+    def user_role_permission(self):
+        """Opens create role window."""
+        self.window_manager.create_window("Set User Role Permission", SetRolePermissionView)
+
+    def user_role_permission_details(self):
+        """Opens create role window."""
+        self.window_manager.create_window("User Role Permission Details", RolePermissionDetails)
+
+
+
+    # !SHOP FUNTIONS START
     def create_shop(self):
         """Opens create shop window."""
         self.window_manager.create_window("Create Shop", CreateShopView)
@@ -173,8 +324,58 @@ class DashboardView(ttk.Frame):
     def list_shop_allocations(self):
         """Opens list shop allocations window."""
         self.window_manager.create_window("Shop Allocation List", ListShopAllocationView)
-
     
+    # !BANK ACCOUNT FUNTIONS START
+    def create_bank_account(self):
+        """Opens list shop allocations window."""
+        self.window_manager.create_window("New Bank Account Form", CreateBankAccountView)
+
+    def on_logout(self):
+        """Logs out the user."""
+        print("logout called")
+        self.window_manager.create_window("Login", LoginView)
+    
+    def list_bank_accounts(self):
+        """Opens list bank accounts window."""
+        self.window_manager.create_window("Bank Account List", ListBankAccountView)
+        print("list bank accounts called")
+        
+    def create_journal_voucher(self):
+        """Opens create journal voucher window."""
+        self.window_manager.create_window("Create Journal Voucher", CreateJournalVoucherView)
+        print("create journal voucher called")
+
+    def list_journal_vouchers(self):
+        """Opens list journal vouchers window."""
+        self.window_manager.create_window("List Journal Vouchers", ListJournalVoucherView)
+        print("list journal vouchers called")
+
+    # !UTILITIES FUNTIONS START
+    def create_utilities(self):
+        """Opens Create Utility Setting window."""
+        self.window_manager.create_window("Create Utility Setting", CreateUtilitySettingView)
+        # print("list journal vouchers called")
+
+    def list_utilities(self):
+        """Opens list of utility settings window."""
+        self.window_manager.create_window("Utilities List", ListUtilitiesView)
+        # print("list journal vouchers called")
+
+    def create_particular(self):
+        """Opens create particular window."""
+        self.window_manager.create_window("Create Particular", CreateParticularView)
+        # print("list journal vouchers called")
+
+    def list_particular(self):
+        """Opens list of particular window."""
+        self.window_manager.create_window("List Particular", ParticularListView)
+        # print("list journal vouchers called")
+
+    def password_change_form(self):
+        """Opens list journal vouchers window."""
+        # self.window_manager.create_window("List Journal Vouchers", ListJournalVouchersView)
+        print("list journal vouchers called")
+
     def show_about(self):
         """Shows about dialog."""
         ttk.dialogs.Messagebox.show_info(
@@ -183,35 +384,61 @@ class DashboardView(ttk.Frame):
             parent=self
         )
 
-    def create_bank_account(self):
-        """Opens create bank account window."""
-        self.window_manager.create_window("Create Bank Account", CreateBankAccountView)
+
+
+    # BILL INFO FUNTIONS START
+
+    def create_bill_info(self):
+        """Opens create bill info window."""
+        self.window_manager.create_window("Create Bill Info", CreateBillInfoView)
     
-    def list_bank_accounts(self):
-        """Open the list bank accounts view."""
-        list_bank_accounts_window = ttk.Toplevel(title="Bank Accounts")
-        list_bank_accounts_window.geometry("800x600")
-        list_view = ListBankAccountView(list_bank_accounts_window)
-        list_view.pack(fill="both", expand=True)
+    def list_bill_info(self):
+        """Opens list bill info window."""
+        self.window_manager.create_window("List Bill Info", BillInfoListView)
 
-    def create_journal_voucher(self):
-        """Opens create journal voucher window."""
-        self.window_manager.create_window("Create Journal Voucher", CreateJournalVoucherView)
+    # def create_bill_particular(self):
+    #     """Opens create bill particular window."""
+    #     self.window_manager.create_window("Create Bill Particular", CreateBillParticularView)
+    
+    # def list_bill_particular(self):
+    #     """Opens list bill particular window."""
+    #     self.window_manager.create_window("List Bill Particular", BillParticularListView)
+    
+    
+    
+    # !ACCOUNTING FUNTIONS START
+    def trial_balance(self):
+        """Opens trial balance window."""
+        self.window_manager.create_window("Trial Balance", TrialBalanceView)
+    
+    def ledger_balance(self):
+        """Opens ledger balance window."""
+        self.window_manager.create_window("Ledger Balance", LedgerBalanceView)
 
-    def list_journal_vouchers(self):
-        """Open the list journal vouchers view."""
-        list_journal_vouchers_window = ttk.Toplevel(title="Journal Vouchers")
-        list_journal_vouchers_window.geometry("800x600")
-        list_view = ListJournalVoucherView(list_journal_vouchers_window)
-        list_view.pack(fill="both", expand=True)
+    def balance_sheet(self):
+        """Opens balance sheet window."""
+        self.window_manager.create_window("Balance Sheet", BalanceSheetView)
 
-    def create_utilities(self):
-        """Opens create utilities window."""
-        self.window_manager.create_window("Create Utilities", CreateUtilitySettingView)
+    
+    def profit_loss(self):
+        """Opens profit loss window."""
+        self.window_manager.create_window("Profit Loss", ProfitLossView)
+    
+    def bill_collection(self):
+        """Opens bill collection window."""
+        self.window_manager.create_window("Bill Collection", CreateBillCollectionView)
 
-    def list_utilities(self):
-        """Open the list utilities view."""
-        list_utilities_window = ttk.Toplevel(title="Utilities")
-        list_utilities_window.geometry("800x600")
-        list_view = ListUtilitiesView(list_utilities_window)
-        list_view.pack(fill="both", expand=True)
+    def bill_collection_list(self):
+        """Opens bill collection window."""
+        self.window_manager.create_window("Bill Collection List", CollectionListView)
+    
+
+    # *MENU FUNTIONS END
+
+    def dynamicMenu(self):
+        # dynamic menu
+        print("dynamic menu called")
+        session = session()
+        menu_top = session.query(UrlTopMenu).all()
+        for mt in menu_top:
+            print(mt.menu_name)

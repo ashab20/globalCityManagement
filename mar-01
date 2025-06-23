@@ -1,0 +1,24 @@
+test and check all crud operations from list
+url
+1.⁠ ⁠Dynamic URL Management
+2.⁠ ⁠List view -> Design with parent frame and scroll
+
+
+
+1. createa bank account with head of account data=bank name(account number)
+2. User Previllages
+3. Dynamic Menu
+
+
+
+pyinstaller script
+pyinstaller --noconfirm --onedir --windowed --icon "/Users/ashab/Desktop/work/Python/globalCityManagement_Windows/assets/images/logo.png" --name "GlobalCityManagement" --add-data "/Users/ashab/Desktop/work/Python/globalCityManagement_Windows/assets:assets/"  "/Users/ashab/Desktop/work/Python/globalCityManagement_Windows/main.py"
+
+
+
+Mar 11, 2025
+
+1. Utility Settings 
+2. Bill Info
+3. ⁠ bill_particular ⁠
+4. 

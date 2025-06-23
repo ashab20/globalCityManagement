@@ -163,7 +163,7 @@ class WindowManager:
         
         # Position window with cascade offset
         offset = len(self.windows) * 30
-        window.place(x=50 + offset, y=50 + offset, width=600, height=700)
+        window.place(x=50 + offset, y=50 + offset, width=700, height=600)
         
         # Add to windows list and bring to front
         self.windows.append(window)

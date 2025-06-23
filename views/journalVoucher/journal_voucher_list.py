@@ -3,6 +3,7 @@ from ttkbootstrap.constants import *
 from ttkbootstrap.dialogs import Messagebox
 from models.JournalVoucher import JournalVoucher
 from utils.database import Session
+from models.acc_head_of_accounts import AccHeadOfAccounts
 
 
 class ListOfJournalVoucherView(ttk.Frame):
@@ -86,8 +87,8 @@ class ListOfJournalVoucherView(ttk.Frame):
 
         try:
             session = Session()
-            vouchers = session.query(JournalVoucher).all()
-
+            vouchers = session.query(JournalVoucher).join(AccHeadOfAccounts, JournalVoucher.head_id == AccHeadOfAccounts.id).all()
+            print(vouchers,"vouchers")
             for voucher in vouchers:
                 self.tree.insert(
                     "",
@@ -99,7 +100,7 @@ class ListOfJournalVoucherView(ttk.Frame):
                         voucher.trans_mode if voucher.trans_mode else "N/A",
                         voucher.trans_date,
                         f"{voucher.trans_amount:.2f}",
-                        voucher.bank_acc_id,
+                        voucher.bank_name,
                         voucher.cheque_no if voucher.cheque_no else "N/A",
                         voucher.entry_by,
                         voucher.entry_time.strftime("%Y-%m-%d %H:%M") if voucher.entry_time else "N/A",

@@ -8,7 +8,7 @@ from views.shopOwner.create_shop_owner_view import CreateShopOwnerView
 
 class ListShopOwnerView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
 
         # Configure styles
@@ -55,18 +55,28 @@ class ListShopOwnerView(ttk.Frame):
         self.tree.column("Edit", width=75, anchor="center")
         self.tree.column("Delete", width=75, anchor="center")
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(
+         # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
             self,
             orient="vertical",
             command=self.tree.yview,
             bootstyle="primary-round"
         )
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.configure(yscrollcommand=yscrollbar.set)
+
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
 
         # Pack widgets
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
 
         # Load shop owners
         self.load_shop_owners()

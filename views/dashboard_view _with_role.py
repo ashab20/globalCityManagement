@@ -54,6 +54,10 @@ class DashboardView(ttk.Frame):
         
         menubar = Menu(self.parent)
         self.parent.config(menu=menubar)
+
+        # Get the function by name and call it
+        method_name = "get_top_menu"
+        top_menu = getattr(self, method_name)()
         
         # Get user role and permissions
         user_role = self.get_user_role()
@@ -232,3 +236,7 @@ class DashboardView(ttk.Frame):
             message="Global City Management System\nVersion 1.0\n\nDeveloped by BITPOINT TECHNOLOGIES LTD.",
             parent=self
         )
+
+    def get_top_menu(self):
+        """Returns the top menu for the current user."""
+        return "Create User"

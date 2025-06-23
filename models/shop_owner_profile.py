@@ -14,6 +14,7 @@ class ShopOwnerProfile(Base):
     nid_number = Column(String(20), nullable=True)
     nid_front = Column(LargeBinary, nullable=True)
     nid_back = Column(LargeBinary, nullable=True)
+    photo = Column(LargeBinary, nullable=True)
     created_by = Column(Integer, nullable=True)
     created_at = Column(DateTime, server_default=func.now(), nullable=True)
     update_by = Column(Integer, nullable=True)

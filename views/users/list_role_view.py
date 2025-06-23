@@ -8,7 +8,7 @@ from models.user_role import UserRole
 
 class ListRoleView(ttk.Frame):
     def __init__(self, root, on_back_callback=None):
-        super().__init__(root, bootstyle="light", padding=20)
+        super().__init__(root, bootstyle="light")
         
         self.root = root
         self.on_back_callback = on_back_callback
@@ -21,12 +21,12 @@ class ListRoleView(ttk.Frame):
         container.pack(expand=True)
         
         # Title
-        # title_label = ttk.Label(
-        #     container,
-        #     text="Role List",
-        #     font=("Helvetica", 24, "bold"),
-        #     bootstyle="primary"
-        # )
+        title_label = ttk.Label(
+            container,
+            text="Role List",
+            font=("Helvetica", 24, "bold"),
+            bootstyle="primary"
+        )
         title_label.pack(pady=(0, 20))
         
         # Create content frame
@@ -84,7 +84,8 @@ class ListRoleView(ttk.Frame):
         """Get all users from database"""
         session = Session()
         try:
-            users = session.query(User).all()
+            role = session.query(UserRole).all()
+            print(f"{role}")
             user_data = []
             
             for user in users:

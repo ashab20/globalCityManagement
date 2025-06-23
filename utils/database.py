@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, scoped_session
 import pymysql
+from models.user_role import UserRole
 
 # Database Configuration
 MYSQL_USERNAME = "root"        
@@ -52,6 +53,7 @@ def import_all_models():
         from models.BankAccount import BankAccount
         from models.JournalVoucher import JournalVoucher
         from models.UtilitySetting import UtilitySetting
+        from models.teanant_trans_history import TeanantTransHistory
         
         print("All models imported successfully.")
     except ImportError as e:
@@ -65,40 +67,41 @@ def setup_database():
     # Create all tables
     Base.metadata.create_all(engine)
     print("All tables created successfully.")
+    
 
     # Insert Initial Data
-    session = Session()
-    try:
-        # Create Admin Role
-        admin_role = session.query(UserRole).filter_by(name="Admin").first()
-        if not admin_role:
-            admin_role = UserRole(name="Admin")
-            session.add(admin_role)
-            session.flush()  # Assigns ID
+    # session = Session()
+    # try:
+    #     # Create Admin Role
+    #     admin_role = session.query(UserRole).filter_by(name="Admin").first()
+    #     if not admin_role:
+    #         admin_role = UserRole(name="Admin")
+    #         session.add(admin_role)
+    #         session.flush()  # Assigns ID
 
-        # Create Admin User
-        admin_user = session.query(User).filter_by(login_id="admin").first()
-        if not admin_user:
-            from werkzeug.security import generate_password_hash
-            admin_user = User(
-                login_id="admin",
-                password=generate_password_hash("admin123"),
-                name="Admin User",
-                user_role_id=admin_role.id,
-                is_active=True
-            )
-            session.add(admin_user)
+    #     # Create Admin User
+    #     admin_user = session.query(User).filter_by(login_id="admin").first()
+    #     if not admin_user:
+    #         from werkzeug.security import generate_password_hash
+    #         admin_user = User(
+    #             login_id="admin",
+    #             password=generate_password_hash("admin123"),
+    #             name="Admin User",
+    #             user_role_id=admin_role.id,
+    #             is_active=True
+    #         )
+    #         session.add(admin_user)
 
-        # Create User Role
-        user_role = session.query(UserRole).filter_by(name="User").first()
-        if not user_role:
-            user_role = UserRole(name="User")
-            session.add(user_role)
+    #     # Create User Role
+    #     user_role = session.query(UserRole).filter_by(name="User").first()
+    #     if not user_role:
+    #         user_role = UserRole(name="User")
+    #         session.add(user_role)
 
-        session.commit()
-        print("Initial data inserted successfully.")
-    except Exception as e:
-        session.rollback()
-        print(f"Error creating initial data: {e}")
-    finally:
-        session.close()
+    #     session.commit()
+    #     print("Initial data inserted successfully.")
+    # except Exception as e:
+    #     session.rollback()
+    #     print(f"Error creating initial data: {e}")
+    # finally:
+    #     session.close()

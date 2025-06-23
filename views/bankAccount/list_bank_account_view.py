@@ -8,7 +8,7 @@ from views.bankAccount.create_bank_account_view import CreateBankAccountView
 
 class ListBankAccountView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
         
         # Create Treeview
@@ -30,13 +30,28 @@ class ListBankAccountView(ttk.Frame):
         self.tree.column("Status", width=100)
         self.tree.column("Entry By", width=100)
         
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(self, orient=VERTICAL, bootstyle="primary-round", command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        
-        # Layout
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
+            self,
+            orient="vertical",
+            command=self.tree.yview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(yscrollcommand=yscrollbar.set)
+
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
+
+        # Pack widgets
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
         
         # Buttons frame
         button_frame = ttk.Frame(self)

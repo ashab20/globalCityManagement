@@ -10,7 +10,7 @@ from views.shopAllocation.create_shop_allocation_view import CreateShopAllocatio
 
 class ListShopAllocationView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
 
         # Configure styles
@@ -53,18 +53,28 @@ class ListShopAllocationView(ttk.Frame):
             self.tree.heading(col, text=col)
             self.tree.column(col, width=100)
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(
+        # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
             self,
             orient="vertical",
             command=self.tree.yview,
             bootstyle="primary-round"
         )
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.configure(yscrollcommand=yscrollbar.set)
+
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
 
         # Pack widgets
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
 
         # Add context menu
         self.context_menu = tk.Menu(self, tearoff=0)

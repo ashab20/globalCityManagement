@@ -5,6 +5,7 @@ from sqlalchemy.orm import sessionmaker
 from models.BankAccount import BankAccount
 from utils.database import Session
 from datetime import datetime
+from models.acc_head_of_accounts import AccHeadOfAccounts
 
 class CreateBankAccountView(ttk.Frame):
     def __init__(self, parent, existing_bank_account=None):
@@ -15,7 +16,7 @@ class CreateBankAccountView(ttk.Frame):
         # StringVars for input fields
         self.bank_name = StringVar()
         self.account_no = StringVar()
-        self.status = StringVar(value="Deactive")  # Default to "Deactive"
+        self.status = StringVar(value="Deactive")
         self.entry_by = StringVar()
 
         # Status mapping
@@ -89,7 +90,7 @@ class CreateBankAccountView(ttk.Frame):
         """Saves or updates the bank account in the database."""
         try:
             session = Session()
-            
+           
             if self.existing_bank_account:
                 # Update existing bank account
                 bank_account = session.query(BankAccount).filter_by(id=self.existing_bank_account.id).first()
@@ -109,18 +110,37 @@ class CreateBankAccountView(ttk.Frame):
                     bank_name=self.bank_name.get(),
                     account_no=self.account_no.get(),
                     status=int(self.get_selected_status()),
-                    entry_by=self.entry_by.get(),
+                    entry_by=1,
                     entry_time=datetime.now()
                 )
                 session.add(new_account)
+                # Flush the session to get the ID
+                session.flush()
+                
+                print(f"New bank account ID: {new_account.id}")
+                
+                # Add Account Head
+                account_head = AccHeadOfAccounts(
+                    head_lvl4th_id=7,
+                    head_name=self.bank_name.get()+" (  "+self.account_no.get()+" )",
+                    remarks="",
+                    bank_id=new_account.id,
+                    isActive=int(self.get_selected_status()),
+                    entry_by=1,
+                    entry_time=datetime.now()
+                )
+                session.add(account_head)
                 message = "Bank account added successfully!"
             
+            # Commit all changes
             session.commit()
             session.close()
 
             ttk.dialogs.Messagebox.show_info(message=message, title="Success", parent=self)
             self.clear_form()
         except Exception as e:
+            session.rollback()
+            session.close()
             ttk.dialogs.Messagebox.show_error(message=f"Error saving bank account: {str(e)}", title="Error", parent=self)
             print(f"Error saving bank account: {str(e)}")
 

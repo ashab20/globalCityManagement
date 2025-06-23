@@ -19,7 +19,7 @@ class UserOptionsDialog(tk.Toplevel):
         self.geometry("400x600")
         
         # Create main frame
-        self.main_frame = ttk.Frame(self, padding=20)
+        self.main_frame = ttk.Frame(self)
         self.main_frame.pack(fill="both", expand=True)
         
         # User Avatar
@@ -465,7 +465,7 @@ class UserOptionsDialog(tk.Toplevel):
 
 class ListUserView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
         
         # Configure styles
@@ -485,7 +485,7 @@ class ListUserView(ttk.Frame):
         columns = ("Serial", "Username", "Full Name", "Email", "Phone", "Avatar", "Role", "Status")
         self.tree = ttk.Treeview(
             self,
-            bootstyle="primary",
+            bootstyle="dark",
             columns=columns,
             show="headings",
             height=15
@@ -578,7 +578,7 @@ class ListUserView(ttk.Frame):
         
         try:
             session = Session()
-            users = session.query(User).all()
+            users = session.query(User).where(User.id !=1).all()
             
             # Store references to prevent garbage collection
             self.avatar_images = []

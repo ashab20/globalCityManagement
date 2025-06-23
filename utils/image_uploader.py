@@ -2,7 +2,7 @@ import base64
 import os
 from PIL import Image
 import io
-
+import sys
 MAX_FILE_SIZE_MB = 2
 
 
@@ -40,4 +40,13 @@ def file_to_base64(file_path, is_image=True):
         print(f"Error converting file to Base64: {str(e)}")
         return None
 
-
+	
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+ 
+    return os.path.join(base_path, relative_path)

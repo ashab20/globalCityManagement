@@ -10,7 +10,7 @@ import tkinter as tk
 
 class ListShopView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
         
         # Configure styles
@@ -35,7 +35,8 @@ class ListShopView(ttk.Frame):
             "Shop Size", 
             "Rent Amount", 
             "Shop Type", 
-            "Status"
+            "Status",
+            "Elect Demand Charge"
         )
         self.tree = ttk.Treeview(
             self,
@@ -50,18 +51,28 @@ class ListShopView(ttk.Frame):
             self.tree.heading(col, text=col)
             self.tree.column(col, width=100)
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(
+        # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
             self,
             orient="vertical",
             command=self.tree.yview,
             bootstyle="primary-round"
         )
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.configure(yscrollcommand=yscrollbar.set)
+
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
 
         # Pack widgets
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
 
         # Bind double-click to edit
         self.tree.bind("<Double-1>", self.edit_shop)
@@ -253,9 +264,10 @@ class ListShopView(ttk.Frame):
                         shop.floor_no,
                         shop.shop_no,
                         shop.descreption,
-                        shop.rent_amout,
+                        shop.rent_amount,
                         shop.rent_type,
-                        shop.active_status
+                        shop.active_status,
+                        shop.elect_demand_chrge
                     )
                 )
                 self.tree.item(item, tags=(shop.id,))  # Store shop ID in tag

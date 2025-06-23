@@ -7,7 +7,7 @@ from utils.database import Session
 
 class ListOfUtilitySettingsView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
 
         # Configure styles
@@ -23,7 +23,7 @@ class ListOfUtilitySettingsView(ttk.Frame):
 
     def create_utility_settings_list(self):
         """Creates the utility settings list view."""
-        columns = ("ID", "Utility Name", "Rate", "Remarks", "Edit", "Delete")
+        columns = ("ID", "Utility Name", "Utility Unit", "Rate", "Remarks", "Edit", "Delete")
         self.tree = ttk.Treeview(
             self,
             bootstyle="primary",
@@ -35,6 +35,7 @@ class ListOfUtilitySettingsView(ttk.Frame):
         # Configure column headings
         self.tree.heading("ID", text="ID")
         self.tree.heading("Utility Name", text="Utility Name")
+        self.tree.heading("Utility Unit", text="Utility Unit")
         self.tree.heading("Rate", text="Rate")
         self.tree.heading("Remarks", text="Remarks")
         self.tree.heading("Edit", text="Edit")
@@ -43,23 +44,34 @@ class ListOfUtilitySettingsView(ttk.Frame):
         # Set column widths
         self.tree.column("ID", width=50, anchor="center")
         self.tree.column("Utility Name", width=200, anchor="w")
+        self.tree.column("Utility Unit", width=100, anchor="center")
         self.tree.column("Rate", width=100, anchor="center")
         self.tree.column("Remarks", width=250, anchor="w")
         self.tree.column("Edit", width=75, anchor="center")
         self.tree.column("Delete", width=75, anchor="center")
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(
+        # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
             self,
             orient="vertical",
             command=self.tree.yview,
             bootstyle="primary-round"
         )
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.configure(yscrollcommand=yscrollbar.set)
+
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
 
         # Pack widgets
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
 
         # Load utility settings
         self.load_utility_settings()
@@ -93,6 +105,7 @@ class ListOfUtilitySettingsView(ttk.Frame):
                     values=(
                         utility.id,
                         utility.utility_name,
+                        utility.utility_unit,
                         f"{utility.utility_rate:.2f}",
                         utility.remarks or "N/A",
                         "Edit",

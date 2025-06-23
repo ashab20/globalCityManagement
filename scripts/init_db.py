@@ -16,6 +16,7 @@ from models.shop_owner_profile import ShopOwnerProfile
 from models.BankAccount import BankAccount
 from models.JournalVoucher import JournalVoucher
 from models.UtilitySetting import UtilitySetting
+from models.teanant_trans_history import TeanantTransHistory
 from werkzeug.security import generate_password_hash
 
 def create_initial_data():
@@ -71,7 +72,7 @@ def main():
         from models.BankAccount import BankAccount
         from models.JournalVoucher import JournalVoucher
         from models.UtilitySetting import UtilitySetting
-
+        from models.teanant_trans_history import TeanantTransHistory
         # Explicitly create all tables
         print("Starting database setup...")
         

@@ -7,7 +7,7 @@ from views.shopRenters.create_renter_view import CreateShopRenterView
 
 class ShopRenterListView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
         self.create_list()
 
@@ -39,18 +39,28 @@ class ShopRenterListView(ttk.Frame):
         self.tree.column("Active Status", width=100)
         self.tree.column("Actions", width=150)
 
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(
+        # Add vertical scrollbar
+        yscrollbar = ttk.Scrollbar(
             self,
             orient="vertical",
             command=self.tree.yview,
             bootstyle="primary-round"
         )
-        self.tree.configure(yscrollcommand=scrollbar.set)
+        self.tree.configure(yscrollcommand=yscrollbar.set)
 
-        # Pack Treeview and scrollbar
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        # Add horizontal scrollbar
+        xscrollbar = ttk.Scrollbar(
+            self,
+            orient="horizontal",
+            command=self.tree.xview,
+            bootstyle="primary-round"
+        )
+        self.tree.configure(xscrollcommand=xscrollbar.set)
+
+        # Pack widgets
+        self.tree.pack(side="top", fill="both", expand=True)
+        yscrollbar.pack(side="right", fill="y")
+        xscrollbar.pack(side="bottom", fill="x")
 
         # Bind double-click event for editing
         self.tree.bind("<Double-1>", self.on_double_click)
@@ -60,6 +70,7 @@ class ShopRenterListView(ttk.Frame):
 
         # Bind right-click event for context menu
         self.tree.bind("<Button-3>", self.show_context_menu)
+
 
     def load_renters(self):
         """Loads the shop renters from the database and displays them in the Treeview."""

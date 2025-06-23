@@ -1,144 +1,185 @@
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import messagebox
-from sqlalchemy.orm import sessionmaker
 from models.UtilitySetting import UtilitySetting
 from utils.database import Session
 from views.utilities.create_utilities import CreateUtilitySettingView
+from models.acc_head_of_accounts import AccHeadOfAccounts
 
 class ListUtilitiesView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
-        
-        # Create Treeview
+        self.create_widgets()
+        self.load_utilities()
+        self.bind_events()
+
+    def create_widgets(self):
+        """Create and arrange UI components"""
+        # Main container
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Treeview with scrollbars
         self.tree = ttk.Treeview(
-            self, 
-            columns=("Utility Name", "Rate", "Remarks"), 
-            show="headings"
+            main_frame,
+            columns=("Utility Name", "Rate", "Unit", "Head Name", "Remarks", "Actions"),
+            show="headings",
+            selectmode="browse",
+            height=15
         )
+
+        # Configure columns
+        columns = {
+            "Utility Name": {"width": 150, "anchor": "w"},
+            "Rate": {"width": 100, "anchor": "e"},
+            "Unit": {"width": 80, "anchor": "center"},
+            "Head Name": {"width": 150, "anchor": "w"},
+            "Remarks": {"width": 200, "anchor": "w"},
+            "Actions": {"width": 120, "anchor": "center"}
+        }
         
-        # Define column headings
-        self.tree.heading("Utility Name", text="Utility Name")
-        self.tree.heading("Rate", text="Rate")
-        self.tree.heading("Remarks", text="Remarks")
-        
-        # Set column widths
-        self.tree.column("Utility Name", width=150)
-        self.tree.column("Rate", width=100)
-        self.tree.column("Remarks", width=100)
-        
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(self, orient=VERTICAL, bootstyle="primary-round", command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        
-        # Layout
-        self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
-        # Buttons frame
+        for col, config in columns.items():
+            self.tree.heading(col, text=col)
+            self.tree.column(col, **config)
+
+        # Scrollbars
+        y_scroll = ttk.Scrollbar(main_frame, orient=VERTICAL, command=self.tree.yview)
+        x_scroll = ttk.Scrollbar(main_frame, orient=HORIZONTAL, command=self.tree.xview)
+        self.tree.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
+
+        # Grid layout
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        y_scroll.grid(row=0, column=1, sticky="ns")
+        x_scroll.grid(row=1, column=0, sticky="ew")
+
+        # Configure grid weights
+        main_frame.grid_rowconfigure(0, weight=1)
+        main_frame.grid_columnconfigure(0, weight=1)
+
+        # Control buttons
         button_frame = ttk.Frame(self)
         button_frame.pack(fill="x", pady=10)
         
-        # Edit and Delete buttons
-        ttk.Button(button_frame, text="Edit", command=self.edit_utility, bootstyle="warning").pack(side="left", padx=5)
-        ttk.Button(button_frame, text="Delete", command=self.delete_utility, bootstyle="danger").pack(side="left", padx=5)
+        ttk.Button(
+            button_frame,
+            text="Add New",
+            command=self.add_new_utility,
+            bootstyle="success"
+        ).pack(side="left", padx=5)
         
-        # Bind double-click to edit
-        self.tree.bind("<Double-1>", self.edit_utility)
-        
-        # Load initial data
-        self.load_utilities()
-    
+        ttk.Button(
+            button_frame,
+            text="Refresh",
+            command=self.load_utilities,
+            bootstyle="primary"
+        ).pack(side="right", padx=5)
+
+    def bind_events(self):
+        """Bind UI events"""
+        self.tree.bind("<Button-1>", self.on_tree_click)
+
     def load_utilities(self):
-        """Load utility settings from the database."""
-        # Clear existing items
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        """Load utilities from database"""
+        self.tree.delete(*self.tree.get_children())
         
         session = Session()
         try:
-            utilities = session.query(UtilitySetting).all()
+            utilities = session.query(
+                UtilitySetting,
+                AccHeadOfAccounts.head_name
+            ).join(
+                AccHeadOfAccounts,
+                UtilitySetting.releted_head_id == AccHeadOfAccounts.id,
+                isouter=True
+            ).all()
             
-            for utility in utilities:
-                # Convert status to readable text
-                # status_text = "Active" if str(utility.status) == "1" else "Inactive"
-                
-                # Insert into treeview
-                item = self.tree.insert("", "end", values=(
-                    utility.utility_name,
-                    utility.utility_rate,
-                    utility.remarks
-                ), tags=(utility.id,))
+            for utility, head_name in utilities:
+                self.tree.insert(
+                    "", 
+                    "end", 
+                    values=(
+                        utility.utility_name,
+                        f"{utility.utility_rate:,.2f}",
+                        utility.utility_unit,
+                        head_name or "N/A",
+                        utility.remarks or "",
+                        "Edit | Delete"
+                    ),
+                    tags=(utility.id,)
+                )
+            
+            self.tree.tag_configure("clickable", foreground="#007bff")
+            
         except Exception as e:
             messagebox.showerror("Error", f"Could not load utilities: {str(e)}")
         finally:
             session.close()
-    
-    def edit_utility(self, event=None):
-        """Open edit window for selected utility."""
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showwarning("Warning", "Please select a utility to edit.")
-            return
+
+    def on_tree_click(self, event):
+        """Handle clicks on the treeview"""
+        region = self.tree.identify("region", event.x, event.y)
+        if region == "cell":
+            column = self.tree.identify_column(event.x)
+            item = self.tree.identify_row(event.y)
+            
+            if column == "#6":  # Actions column
+                item_id = self.tree.item(item, "tags")[0]
+                col_bbox = self.tree.bbox(item, column="#6")
+                
+                if col_bbox:
+                    # Calculate click position relative to column
+                    click_x = event.x - col_bbox[0]
+                    if click_x < col_bbox[2]/2:
+                        self.edit_utility(item_id)
+                    else:
+                        self.delete_utility(item_id)
+
+    def add_new_utility(self):
+        """Open new utility creation window"""
+        add_window = ttk.Toplevel(self)
+        add_window.title("Add New Utility")
+        add_window.geometry("500x400")
         
-        # Get the utility ID from the item's tag
-        utility_id = self.tree.item(selected_item[0], "tags")[0]
+        add_view = CreateUtilitySettingView(add_window)
+        add_view.pack(fill="both", expand=True)
         
+        add_view.save_button.configure(
+            command=lambda: [self.load_utilities(), add_window.destroy()]
+        )
+
+    def edit_utility(self, item_id):
+        """Open utility editing window"""
         session = Session()
         try:
-            utility = session.query(UtilitySetting).filter_by(id=utility_id).first()
-            
+            utility = session.query(UtilitySetting).get(item_id)
             if utility:
-                # Create a new window for editing
-                edit_window = ttk.Toplevel(title="Edit Utility")
+                edit_window = ttk.Toplevel(self)
+                edit_window.title("Edit Utility")
                 edit_window.geometry("500x400")
                 
-                # Create edit view
                 edit_view = CreateUtilitySettingView(edit_window, existing_utility=utility)
                 edit_view.pack(fill="both", expand=True)
                 
-                # Add a callback to refresh list after editing
-                def on_save():
+                edit_view.save_button.configure(
+                    command=lambda: [self.load_utilities(), edit_window.destroy()]
+                )
+        finally:
+            session.close()
+
+    def delete_utility(self, item_id):
+        """Delete selected utility"""
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this utility?"):
+            session = Session()
+            try:
+                utility = session.query(UtilitySetting).get(item_id)
+                if utility:
+                    session.delete(utility)
+                    session.commit()
                     self.load_utilities()
-                    edit_window.destroy()
-                
-                edit_view.save_button.config(command=on_save)
-            
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not load utility for editing: {str(e)}")
-        finally:
-            session.close()
-    
-    def delete_utility(self):
-        """Delete the selected utility."""
-        selected_item = self.tree.selection()
-        if not selected_item:
-            messagebox.showwarning("Warning", "Please select a utility to delete.")
-            return
-        
-        # Confirm deletion
-        confirm = messagebox.askyesno("Confirm", "Are you sure you want to delete this utility?")
-        if not confirm:
-            return
-        
-        # Get the utility ID from the item's tag
-        utility_id = self.tree.item(selected_item[0], "tags")[0]
-        
-        session = Session()
-        try:
-            utility = session.query(UtilitySetting).filter_by(id=utility_id).first()
-            
-            if utility:
-                session.delete(utility)
-                session.commit()
-                
-                # Refresh the list
-                self.load_utilities()
-                messagebox.showinfo("Success", "Utility deleted successfully.")
-            
-        except Exception as e:
-            session.rollback()
-            messagebox.showerror("Error", f"Could not delete utility: {str(e)}")
-        finally:
-            session.close()
+                    messagebox.showinfo("Success", "Utility deleted successfully.")
+            except Exception as e:
+                session.rollback()
+                messagebox.showerror("Error", f"Could not delete utility: {str(e)}")
+            finally:
+                session.close()

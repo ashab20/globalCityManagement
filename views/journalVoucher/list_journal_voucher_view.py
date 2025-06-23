@@ -5,16 +5,22 @@ from sqlalchemy.orm import sessionmaker
 from models.JournalVoucher import JournalVoucher
 from utils.database import Session
 from views.journalVoucher.create_journal_voucher import CreateJournalVoucherView
+from models.acc_head_of_accounts import AccHeadOfAccounts
+from ttkbootstrap.dialogs import Messagebox
 
 class ListJournalVoucherView(ttk.Frame):
     def __init__(self, parent):
-        super().__init__(parent, padding=20)
+        super().__init__(parent)
         self.parent = parent
         
+        # Create a frame for the treeview and scrollbars
+        tree_frame = ttk.Frame(self)
+        tree_frame.pack(fill="both", expand=True)
+
         # Create Treeview
         self.tree = ttk.Treeview(
-            self, 
-            columns=("Date", "Voucher Type", "Description", "Amount"), 
+            tree_frame, 
+            columns=("Date", "Voucher Type", "Description", "Amount", "Bank Name", "Cheque No", "Entry By", "Entry Time", "Edit", "Delete"), 
             show="headings"
         )
         
@@ -23,20 +29,37 @@ class ListJournalVoucherView(ttk.Frame):
         self.tree.heading("Voucher Type", text="Voucher Type")
         self.tree.heading("Description", text="Description")
         self.tree.heading("Amount", text="Amount")
+        self.tree.heading("Bank Name", text="Bank Name")
+        self.tree.heading("Cheque No", text="Cheque No")
+        self.tree.heading("Entry By", text="Entry By")
+        self.tree.heading("Entry Time", text="Entry Time")
+        self.tree.heading("Edit", text="Edit")
+        self.tree.heading("Delete", text="Delete")
         
         # Set column widths
         self.tree.column("Date", width=100)
         self.tree.column("Voucher Type", width=150)
         self.tree.column("Description", width=200)
-        self.tree.column("Amount", width=100)
+        self.tree.column("Amount", width=250)
+        self.tree.column("Bank Name", width=300)
+        self.tree.column("Cheque No", width=350)
+        self.tree.column("Entry By", width=400)
+        self.tree.column("Entry Time", width=450)
+        self.tree.column("Edit", width=500)
+        self.tree.column("Delete", width=100)
         
-        # Add scrollbar
-        scrollbar = ttk.Scrollbar(self, orient=VERTICAL, bootstyle="primary-round", command=self.tree.yview)
-        self.tree.configure(yscroll=scrollbar.set)
-        
-        # Layout
+        # Add vertical scrollbar
+        v_scrollbar = ttk.Scrollbar(tree_frame, orient=VERTICAL, bootstyle="primary-round", command=self.tree.yview)
+        self.tree.configure(yscroll=v_scrollbar.set)
+
+        # Add horizontal scrollbar
+        h_scrollbar = ttk.Scrollbar(tree_frame, orient=HORIZONTAL, bootstyle="primary-round", command=self.tree.xview)
+        self.tree.configure(xscroll=h_scrollbar.set)
+
+        # Layout the treeview and scrollbars
+        v_scrollbar.pack(side="right", fill="y")
+        h_scrollbar.pack(side="bottom", fill="x")
         self.tree.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
         
         # Buttons frame
         button_frame = ttk.Frame(self)
@@ -57,23 +80,40 @@ class ListJournalVoucherView(ttk.Frame):
         # Clear existing items
         for item in self.tree.get_children():
             self.tree.delete(item)
-        
-        session = Session()
+
         try:
-            journal_vouchers = session.query(JournalVoucher).all()
-            
-            for voucher in journal_vouchers:
-                # Insert into treeview
-                item = self.tree.insert("", "end", values=(
-                    voucher.trans_date,
-                    voucher.trans_type,
-                    voucher.remarks,
-                    voucher.trans_amount
-                ), tags=(voucher.id,))
-        except Exception as e:
-            messagebox.showerror("Error", f"Could not load journal vouchers: {str(e)}")
-        finally:
+            session = Session()
+            vouchers = session.query(JournalVoucher).join(AccHeadOfAccounts, JournalVoucher.head_id == AccHeadOfAccounts.id).all()
+            print(vouchers,"vouchers")
+            for voucher in vouchers:
+                self.tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        voucher.id,
+                        voucher.head_id,
+                        voucher.trans_type,
+                        voucher.trans_mode if voucher.trans_mode else "N/A",
+                        voucher.trans_date,
+                        f"{voucher.trans_amount:.2f}",
+                        voucher.bank_name if voucher.bank_name else "N/A",
+                        voucher.cheque_no if voucher.cheque_no else "N/A",
+                        voucher.entry_by,
+                        voucher.entry_time.strftime("%Y-%m-%d %H:%M") if voucher.entry_time else "N/A",
+                        "Edit",
+                        "Delete"
+                    ),
+                    tags=(voucher.id,)  # Store voucher ID in tag
+                )
+
             session.close()
+
+        except Exception as e:
+            Messagebox.show_error(
+                message=f"Error loading journal vouchers: {str(e)}",
+                title="Error",
+                parent=self
+            )
     
     def edit_journal_voucher(self, event=None):
         """Open edit window for selected journal voucher."""
@@ -135,10 +175,18 @@ class ListJournalVoucherView(ttk.Frame):
                 
                 # Refresh the list
                 self.load_journal_vouchers()
-                messagebox.showinfo("Success", "Journal voucher deleted successfully.")
+                Messagebox.show_info(
+                    message="Journal voucher deleted successfully.",
+                    title="Success",
+                    parent=self
+                )
             
         except Exception as e:
             session.rollback()
-            messagebox.showerror("Error", f"Could not delete journal voucher: {str(e)}")
+            Messagebox.show_error(
+                message=f"Error deleting journal voucher: {str(e)}",
+                title="Error",
+                parent=self
+            )
         finally:
             session.close()

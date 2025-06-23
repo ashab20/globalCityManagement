@@ -21,18 +21,82 @@ class CreateUserView(ttk.Frame):
         style.configure("TLabel", background="white")
         style.configure("TButton", font=("Helvetica", 10))
         
+        # Create main container
+        self.main_container = ttk.Frame(self)
+        self.main_container.pack(fill="both", expand=True)
+        
+        # Create canvas and scrollbar
+        self.canvas = ttk.Canvas(self.main_container)
+        self.scrollbar = ttk.Scrollbar(self.main_container, orient="vertical", command=self.canvas.yview)
+        
+        # Create scrollable frame
+        self.scrollable_frame = ttk.Frame(self.canvas)
+        
+        # Configure scrolling
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+        
+        # Create window inside canvas
+        self.canvas_frame = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        
+        # Configure canvas scrolling
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        # Pack scrollbar and canvas
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        
+        # Configure canvas size
+        self.canvas.bind('<Configure>', self._configure_canvas)
+        
+        # Bind mouse wheel
+        self.bind_mouse_wheel()
+        
         # Create form
         self.create_form()
     
+    def _configure_canvas(self, event):
+        # Update the width of the scrollable frame to fill the canvas
+        self.canvas.itemconfig(self.canvas_frame, width=event.width)
+        
+        # Get the required height for all content
+        required_height = self.scrollable_frame.winfo_reqheight()
+        
+        # Configure the canvas's scroll region
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        
+        # Set minimum size for the canvas
+        self.canvas.configure(width=event.width, height=min(required_height, 600))  # Set max height to 600 pixels
+    
+    def bind_mouse_wheel(self):
+        """Bind mouse wheel to scrolling"""
+        def _on_mousewheel(event):
+            self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        
+        # Bind mouse wheel events
+        self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _bound_to_mousewheel(event):
+            self.canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        
+        def _unbound_to_mousewheel(event):
+            self.canvas.unbind_all("<MouseWheel>")
+        
+        # Bind enter/leave events
+        self.scrollable_frame.bind("<Enter>", _bound_to_mousewheel)
+        self.scrollable_frame.bind("<Leave>", _unbound_to_mousewheel)
+
     def create_form(self):
         """Creates the user creation form."""
         # Create a container frame to control width and center the form
-        form_container = ttk.Frame(self)
+        form_container = ttk.Frame(self.scrollable_frame)
         form_container.pack(fill="both", expand=True, padx=20, pady=20)
         
         # Inner frame to center the content
         inner_frame = ttk.Frame(form_container)
-        inner_frame.pack(expand=True, anchor="center")
+        inner_frame.pack(expand=True)
 
         # Get roles from database
         session = Session()
@@ -184,7 +248,7 @@ class CreateUserView(ttk.Frame):
         # Avatar
         ttk.Label(
             inner_frame,
-            text="Avatar:",
+            text="Picture:",
             font=("Helvetica", 12),  
             bootstyle="primary"
         ).pack(anchor="w", fill="x")
@@ -192,7 +256,7 @@ class CreateUserView(ttk.Frame):
         # Avatar selection button
         self.avatar_button = ttk.Button(
             inner_frame,
-            text="Select Avatar",
+            text="Select Picture",
             bootstyle="primary-outline",
             command=self.select_avatar
         )

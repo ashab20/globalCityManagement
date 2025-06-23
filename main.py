@@ -1,4 +1,4 @@
-import ttkbootstrap as ttk
+import ttkbootstrap as ttk # type: ignore
 from views.login_view import LoginView
 from views.dashboard_view import DashboardView
 from utils.database import setup_database, Session
@@ -54,7 +54,7 @@ class App:
     
     def on_login(self, user=None):
         """Handle successful login."""
-        print(f"Login successful for user: {user}")
+        # print(f"Login successful for user: {user}")
         self.show_dashboard(user)
     
     def on_logout(self):

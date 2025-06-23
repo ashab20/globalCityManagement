@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from .base import Base
 
 class UserRole(Base):
-    __tablename__ = 'user_roles' 
+    __tablename__ = 'user_role' 
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(50), nullable=False)
