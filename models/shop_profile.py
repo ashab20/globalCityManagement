@@ -32,6 +32,8 @@ class ShopProfile(Base):
     # allocations = relationship("ShopAllocation", back_populates="shop_profile")
     # bills = relationship("BillInfo", back_populates="shop")
     # bills = relationship("BillInfo", back_populates="shop", cascade="all, delete-orphan")
+    product_purchases = relationship("ProductPurchase", back_populates="shop")
+    demand_products = relationship("DemandProduct", back_populates="shop")
 
     def __repr__(self):
         return f"<ShopProfile(id={self.id}, name='{self.shop_name}', floor_no='{self.floor_no}')>"

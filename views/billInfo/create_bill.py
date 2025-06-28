@@ -966,6 +966,7 @@ class CreateBillInfoView(ttk.Frame):
                 
                 # tenant profile by shop_id
                 # tenant_profile = session.query(ShopProfile).filter_by(shop_id=data['shop_id']).first()
+                print(f"shop_id: {shop_id}, bill_year: {bill_year}, bill_month: {bill_month}")
                 shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(session,shop_id, year=bill_year, month=bill_month)
                 if not shop_allocation:
                     raise ValueError("No shop allocation found for the selected shop/month/year.")
@@ -1015,6 +1016,7 @@ class CreateBillInfoView(ttk.Frame):
                     )
                     session.add(new_particular)
 
+                teant_amount = 0
                 for draft in drafts:
                     drHeadId = crHeadId = crHeadId2 = 0
                     if draft.bill_particular == "House Rent":
@@ -1037,7 +1039,8 @@ class CreateBillInfoView(ttk.Frame):
                         ])
 
                         # ? INSERT TO TEANANT TRANS HISTORY
-                        AccountingController.insert_teanant_trans_history(session, shop_allocation.renter_profile_id, bill_info.id, None, date.today(), draft.sub_amount, "dr", draft.sub_amount, "cr", f"Bill Generations for {draft.bill_particular}-dr", "1")
+                        teant_amount += draft.sub_amount
+                        AccountingController.insert_teanant_trans_history(session, drHeadId, shop_allocation.renter_profile_id, bill_info.id, None, date.today(), draft.sub_amount, "dr", teant_amount, "dr", f"Bill Generations for {draft.bill_particular}-dr", "1")
 
                         AccountingController.manage_transaction(session, [
                             "+", "insert", crHeadId, bill_info.id, date.today(), draft.sub_amount,

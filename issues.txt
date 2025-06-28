@@ -1,2 +1,29 @@
 
-Due report (Particular History)
+SHOP OWER Due report (Particular History)
+
+-- Show Shop List
+SELECT shop_profile.id as shop_id, shop_profile.shop_name, shop_profile.shop_no, bill_due.due_amount FROM bill_due
+inner join shop_profile on shop_profile.id=bill_due.shop_id;
+
+
+-- Show Items Name
+SELECT bill_particular.bill_particular FROM bill_particular
+inner join bill_info on bill_info.id=bill_particular.bill_id
+inner join shop_profile on shop_profile.id=bill_info.shop_id
+WHERE shop_profile.id=5
+GROUP BY bill_particular.bill_particular;
+
+-- Last One Year Billing Month
+-- on Database month=02, year=2025 but need to show Dec-25
+
+
+-- FIND Due amount for specifice shop,specific particular/items for specific month of the year
+
+
+SELECT bill_particular.bill_particular, bill_particular.due_amount
+from bill_particular
+inner join bill_info on bill_info.id=bill_particular.bill_id
+WHERE bill_particular.due_amount!='NULL'
+AND bill_info.bill_month=06
+AND bill_info.bill_year=2025
+AND bill_particular.bill_type="Bill";

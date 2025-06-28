@@ -27,3 +27,14 @@ class ShopAllocation(Base):
 
     def __repr__(self):
         return f"<ShopAllocation(id={self.id}, shop_profile_id={self.shop_profile_id}, renter_profile_id={self.renter_profile_id})>"
+
+    @classmethod
+    def get_renter_profile_by_shop_id(cls, session, shop_id, year=None, month=None):
+        """Get renter profile by shop_id"""
+        try:
+            # query = session.query(cls).filter_by(shop_profile_id=shop_id, from_year=year, from_month=month).first()
+            query = session.query(cls).filter_by(shop_profile_id=shop_id).first()
+            return query
+        except Exception as e:
+            print(f"Error getting renter profile by shop_id: {str(e)}")
+            return None

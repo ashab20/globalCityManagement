@@ -2,6 +2,9 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import Menu
 from utils.window_manager import WindowManager
+from views.accounting.shop_renter_due_report import ShopRenterDueReportView
+from views.unit.create_unit import CreateUnitView
+from views.unit.unit_list import UnitListView
 from views.users.create_user_view import CreateUserView
 from views.users.list_user_view import ListUserView
 from views.users.create_role_view import CreateRoleView
@@ -41,6 +44,13 @@ from views.accounting.profit_loss import ProfitLossView
 from views.billCollection.create_bill_collection import CreateBillCollectionView
 from controllers.accounting_controller import AccountingController
 from views.billCollection.bill_collection_list import CollectionListView
+from views.accounting.shop_owner_due_report import ShopOwnerDueReportView
+from views.accounting.shop_renter_due_report import ShopRenterDueReportView
+from views.category.create_category import CreateCategoryView
+from views.category.category_list import CategoryListView
+from views.product.create_product import CreateProductView
+from views.product.product_list import ProductListView
+from utils.toltip import ToolTip
 # from sqlalchemy.orm import Session
 
 
@@ -63,6 +73,9 @@ class DashboardView(ttk.Frame):
         
         # Show welcome message
         self.show_welcome()
+
+        # Render internal menu
+        self.render_internal_menu(self.container)
     
     def create_menu(self):
         """Creates the main menu bar with role-based access control."""
@@ -154,7 +167,7 @@ class DashboardView(ttk.Frame):
             # top_menu = session.query(UrlTopMenu).all()
             # print(f"top menu: {top_menu}")
 
-            menu_top = session.query(UrlTopMenu).all() 
+            menu_top = session.query(UrlTopMenu).order_by(UrlTopMenu.menu_order).all() 
             session.close()
             return menu_top
             
@@ -168,7 +181,7 @@ class DashboardView(ttk.Frame):
             # top_menu = session.query(UrlTopMenu).all()
             # print(f"top menu: {top_menu}")
 
-            menu_top = session.query(UrlSubMenu).filter_by(top_menu_id=id).all()
+            menu_top = session.query(UrlSubMenu).filter_by(top_menu_id=id).order_by(UrlSubMenu.sub_menu_order).all()
             session.close()
             return menu_top
             
@@ -403,10 +416,70 @@ class DashboardView(ttk.Frame):
     # def list_bill_particular(self):
     #     """Opens list bill particular window."""
     #     self.window_manager.create_window("List Bill Particular", BillParticularListView)
+
+
+    # !INVENTORY FUNTIONS START
+
+    def product_category(self):
+        """Opens create product category window."""
+        self.window_manager.create_window("Product Category", CreateCategoryView)
+
+    def product_category_list(self):
+        """Opens list product category window."""
+        self.window_manager.create_window("Product Category List", CategoryListView)
+
+    def create_product(self):
+        """Opens list bill info window."""
+        self.window_manager.create_window("Product List", CreateProductView)
+
+    def product_details_list(self):
+        """Opens list bill info window."""
+        self.window_manager.create_window("Product List", ProductListView)
+
+    def demand_product(self):
+        """Opens Demand Product window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def demand_product_list(self):
+        """Opens Demand Product List window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def create_unit(self):
+        """Opens Create Unit window."""
+        self.window_manager.create_window("Create Unit", CreateUnitView)
+
+    def unit_list(self):
+        """Opens Unit List window."""
+        self.window_manager.create_window("Unit List", UnitListView)
+
+    def product_purchase(self):
+        """Opens Product Purchase window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def product_purchase_list(self):
+        """Opens Product Purchase List window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def product_issues(self):
+        """Opens Product Issues window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def product_issues_list(self):
+        """Opens Product Issues List window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
     
     
     
     # !ACCOUNTING FUNTIONS START
+
+    def stock_report(self):
+        """Opens Stock Report window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+    def stock_report_list(self):
+        """Opens Stock Report List window."""
+        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
     def trial_balance(self):
         """Opens trial balance window."""
         self.window_manager.create_window("Trial Balance", TrialBalanceView)
@@ -418,6 +491,14 @@ class DashboardView(ttk.Frame):
     def balance_sheet(self):
         """Opens balance sheet window."""
         self.window_manager.create_window("Balance Sheet", BalanceSheetView)
+    
+    def shop_owner_due_report(self):
+        """Opens due report window."""
+        self.window_manager.create_window("Shop Owner Due Report", ShopOwnerDueReportView)
+
+    def shop_renter_due_report(self):
+        """Opens due report window."""
+        self.window_manager.create_window("Shop Renter Due Report", ShopRenterDueReportView)
 
     
     def profit_loss(self):
@@ -439,6 +520,95 @@ class DashboardView(ttk.Frame):
         # dynamic menu
         print("dynamic menu called")
         session = session()
-        menu_top = session.query(UrlTopMenu).all()
+        menu_top = session.query(UrlTopMenu).order_by(UrlTopMenu.menu_order).all()
         for mt in menu_top:
             print(mt.menu_name)
+
+    # Enhanced icon handling
+    ICON_MAP = {
+        'Users': '👤',
+        'Shop': '🏪',
+        'Reports': '📊',
+        'Account': '💰',
+        'Help': '❓',
+        'Profile': '👤',
+        'Utility': '⚙️',
+        'User Management': '👥',
+        'Shop Management': '🏬',
+        'Accounting': '📈',
+        'Billing': '🧾',
+        'Inventory': '📦',
+        'Settings': '⚙️',
+        'Logout': '🚪'
+    }
+
+    def render_internal_menu(self, parent_frame):
+        """
+        Renders icon-only internal menu at the top of the window.
+        """
+        try:
+            top_menus = self.get_url_top_menu()
+            
+            # Create dedicated menu bar frame
+            menu_bar = ttk.Frame(parent_frame, height=40, style="Primary.TFrame")
+            menu_bar.pack(fill="x", pady=(0, 10))
+            menu_bar.pack_propagate(False)  # Keep fixed height
+            
+            # Add application logo on left
+            logo_frame = ttk.Frame(menu_bar, width=150)
+            logo_frame.pack(side="left", fill="y")
+            
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                   'assets', 'images', 'logo.png')
+            if os.path.exists(logo_path):
+                logo_img = Image.open(logo_path).resize((120, 30), Image.Resampling.LANCZOS)
+                self.logo = ImageTk.PhotoImage(logo_img)
+                ttk.Label(logo_frame, image=self.logo).pack(padx=10, pady=5)
+            
+            # Menu container
+            menu_container = ttk.Frame(menu_bar)
+            menu_container.pack(side="left", fill="both", expand=True, padx=20)
+            
+            for mt in top_menus:
+                # Get icon from mapping or use default
+                icon_char = self.ICON_MAP.get(mt.menu_name.strip(), '📋')
+                
+                # Create menu button
+                btn = ttk.Button(
+                    menu_container,
+                    text=icon_char,
+                    command=lambda m=mt: self.open_first_submenu(m),
+                    width=3,
+                    bootstyle="light-outline"
+                )
+                btn.pack(side="left", padx=5)
+                ToolTip(btn, text=mt.menu_name, delay=500)
+                
+            # Add logout button on right
+            logout_btn = ttk.Button(
+                menu_bar,
+                text="🚪",
+                command=self.on_logout,
+                width=3,
+                bootstyle="danger-outline"
+            )
+            logout_btn.pack(side="right", padx=10)
+            ToolTip(logout_btn, text="Logout", delay=500)
+            
+        except Exception as e:
+            print(f"Error rendering internal menu: {e}")
+    
+    def open_first_submenu(self, top_menu):
+        submenus = self.get_url_sub_menu(top_menu.id)
+        if not submenus:
+            return
+
+        first_sub = submenus[0]
+        try:
+            method_name = first_sub.command_name.lower().replace(' ', '_')
+            menu_action = getattr(self, method_name)
+            menu_action()
+        except AttributeError:
+            print(f"No method: {method_name}")
+
+

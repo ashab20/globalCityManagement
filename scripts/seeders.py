@@ -2,6 +2,8 @@ from utils.database import Session, setup_database
 from models.user_role import UserRole
 from models.user import User
 from models.shop_profile import ShopProfile
+from models.category import Category
+from models.unit import Unit
 from werkzeug.security import generate_password_hash
 import random
 
@@ -32,6 +34,80 @@ def create_roles():
     except Exception as e:
         session.rollback()
         print(f"Error creating roles: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def create_units():
+    """Create sample units"""
+    session = Session()
+    units = [
+        "Piece", "Kg", "Gram", "Liter", "Meter", "Centimeter", "Inch", "Foot", 
+        "Yard", "Square Meter", "Square Foot", "Cubic Meter", "Dozen", "Pair",
+        "Set", "Pack", "Box", "Bottle", "Can", "Bag", "Roll", "Sheet", "Unit"
+    ]
+    
+    created_units = []
+    try:
+        for unit_name in units:
+            unit = session.query(Unit).filter_by(unit_name=unit_name).first()
+            if not unit:
+                unit = Unit(
+                    unit_name=unit_name,
+                    status=1
+                )
+                session.add(unit)
+                session.flush()
+            created_units.append(unit)
+        
+        session.commit()
+        print("Units created successfully!")
+        return created_units
+    except Exception as e:
+        session.rollback()
+        print(f"Error creating units: {e}")
+        return []
+    finally:
+        session.close()
+
+
+def create_categories():
+    """Create sample categories"""
+    session = Session()
+    categories = [
+        {"name": "Electronics", "description": "Electronic devices and gadgets"},
+        {"name": "Clothing", "description": "Apparel and fashion items"},
+        {"name": "Food & Beverages", "description": "Food and drink products"},
+        {"name": "Books", "description": "Books and publications"},
+        {"name": "Home & Garden", "description": "Home improvement and garden items"},
+        {"name": "Sports & Outdoors", "description": "Sports equipment and outdoor gear"},
+        {"name": "Toys & Games", "description": "Toys and entertainment items"},
+        {"name": "Health & Beauty", "description": "Health and beauty products"},
+        {"name": "Automotive", "description": "Automotive parts and accessories"},
+        {"name": "Office Supplies", "description": "Office and stationery items"}
+    ]
+    
+    created_categories = []
+    try:
+        for cat_data in categories:
+            category = session.query(Category).filter_by(name=cat_data["name"]).first()
+            if not category:
+                category = Category(
+                    name=cat_data["name"],
+                    description=cat_data["description"],
+                    status=1
+                )
+                session.add(category)
+                session.flush()
+            created_categories.append(category)
+        
+        session.commit()
+        print("Categories created successfully!")
+        return created_categories
+    except Exception as e:
+        session.rollback()
+        print(f"Error creating categories: {e}")
         return []
     finally:
         session.close()
@@ -161,6 +237,18 @@ def run_all_seeders():
     roles = create_roles()
     if not roles:
         print("Failed to create roles. Stopping seeding process.")
+        return
+        
+    # Create units
+    units = create_units()
+    if not units:
+        print("Failed to create units. Stopping seeding process.")
+        return
+        
+    # Create categories
+    categories = create_categories()
+    if not categories:
+        print("Failed to create categories. Stopping seeding process.")
         return
         
     # Create users

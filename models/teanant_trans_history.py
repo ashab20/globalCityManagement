@@ -5,6 +5,7 @@ class TeanantTransHistory(Base):
     __tablename__ = 'teanant_trans_history'
     
     id = Column(Integer, primary_key=True, autoincrement=True)
+    head_id = Column(Integer, nullable=True)
     teanant_id = Column(Integer, nullable=True)
     bill_info_id = Column(Integer, nullable=True)
     collect_id = Column(Integer, nullable=True)

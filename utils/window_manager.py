@@ -3,6 +3,17 @@ from ttkbootstrap.constants import *
 
 
 class InternalWindow(ttk.Frame):
+    DEFAULT_ICONS = {
+        "User Management": "👤",
+        "Shop Management": "🏪",
+        "Accounting Management": "💰",
+        "Bill and Collections": "📥",
+        "Inventory": "📦",
+        "Report": "📊",
+        "Settings": "⚙️",
+        "Help": "❓"
+    }
+
     def __init__(self, parent, title, window_manager):
         super().__init__(parent)
         self.parent = parent
@@ -98,18 +109,26 @@ class InternalWindow(ttk.Frame):
     
     def _check_focus(self, event):
         """Check if window should be brought to front."""
-        if isinstance(event.widget, (ttk.Button, ttk.Entry)):
-            return
+        try:
+            if isinstance(event.widget, (ttk.Button, ttk.Entry)):
+                return
+                
+            # Check if window still exists and is properly initialized
+            if not self.winfo_exists():
+                return
+                
+            # Check if click is within this window
+            x = self.winfo_rootx()
+            y = self.winfo_rooty()
+            w = self.winfo_width()
+            h = self.winfo_height()
             
-        # Check if click is within this window
-        x = self.winfo_rootx()
-        y = self.winfo_rooty()
-        w = self.winfo_width()
-        h = self.winfo_height()
-        
-        if (x <= event.x_root <= x + w and 
-            y <= event.y_root <= y + h):
-            self.lift()
+            if (x <= event.x_root <= x + w and 
+                y <= event.y_root <= y + h):
+                self.lift()
+        except Exception as e:
+            # Silently handle any window-related errors
+            pass
     
     def _on_close(self):
         """Handle window close."""

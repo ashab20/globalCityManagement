@@ -609,10 +609,21 @@ class CreateBillCollectionView(Frame):
             if bill_collection:
                 Messagebox.show_error("Bill collection already exists", "Error")
                 return
-            
-            shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(session,data['shop_id'], year=data['bill_year'], month=data['bill_month'])
+
+            # NEED TO GET BILLING YEAR AND MONTH FROM BILL INFO
+            bill_info = session.query(BillInfo).filter_by(id=int(data['bill_id'])).first()
+            if bill_info:
+                data['bill_year'] = bill_info.bill_year
+                data['bill_month'] = bill_info.bill_month
+            else:
+                Messagebox.show_error("Bill info not found", "Error")
+                return
+            print('data',data)
+            shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(session,data['shop_id'], year=int(data['bill_year']), month=int(data['bill_month']))
             # if not shop_allocation:
             #     raise ValueError("No shop allocation found for the selected shop/month/year.")
+            # print('shop_allocation',shop_allocation)
+            # return
             
             # Create BillCollection entry
             collection = BillCollection(
@@ -632,15 +643,17 @@ class CreateBillCollectionView(Frame):
             session.flush()  # Get collection ID
 
             total_paid = Decimal('0')
-            print('len:',len(bill_particulars))
+            # print('len:',len(bill_particulars))
 
             # tenant profile by shop_id
             # # tenant_profile = session.query(ShopProfile).filter_by(shop_id=data['shop_id']).first()
-            shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(data['shop_id'], year=data['trans_date'].year, month=data['trans_date'].month)
+            # shop_allocation = ShopAllocation.get_renter_profile_by_shop_id(data['shop_id'], year=data['trans_date'].year, month=data['trans_date'].month)
             # if shop_allocation:
             #     renter_profile_id = shop_allocation.renter_profile_id
             # else:
             #     renter_profile_id = None
+
+            teant_amount = 0
             
             # ? UPDATE BILL PARTICULARS AND CREATE COLLECTION PARTICULARS
             for idx, particular in enumerate(bill_particulars):
@@ -705,15 +718,17 @@ class CreateBillCollectionView(Frame):
                         ])
 
                         # # ? INSERT TO TEANANT TRANS HISTORY
+                        teant_amount += pay_now
                         AccountingController.insert_teanant_trans_history(
                             session,
+                            crHeadId,
                             shop_allocation.renter_profile_id,
                             collection.id, None, 
                             collection.trans_date, 
                             pay_now, "cr", 
-                            pay_now, 
-                            "dr", 
-                            f"Bill Collection - Debit", 
+                            teant_amount, 
+                            "cr", 
+                            f"Bill Collection - Credit", 
                             "1"
                         )
 

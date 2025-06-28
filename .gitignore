@@ -3,6 +3,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*pyc
 
 # Distribution / packaging
 dist/
@@ -13,7 +14,7 @@ build/
 venv/
 env/
 .env/
-.venv/
+.venv/*
 
 # IDE-specific files
 .vscode/
@@ -73,7 +74,9 @@ yarn-error.log*
 
 # Backup files
 *.bak
+*.pyc
 *.gho
 *.ori
 *.orig
 *.tmp
+*.venv/*

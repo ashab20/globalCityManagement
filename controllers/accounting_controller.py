@@ -254,8 +254,9 @@ class AccountingController:
         return cd_type
     
     @staticmethod
-    def insert_teanant_trans_history(session: Session, teanant_id: int, bill_info_id: int, collect_id: int, trans_dt: datetime, trans_amount: float, crdr_type: str, closing_amt: float, closing_crdr_type: str, remarks: str, entry_user: str):
+    def insert_teanant_trans_history(session: Session,head_id:int ,teanant_id: int, bill_info_id: int, collect_id: int, trans_dt: datetime, trans_amount: float, crdr_type: str, closing_amt: float, closing_crdr_type: str, remarks: str, entry_user: str):
         teanant_trans_history = TeanantTransHistory(
+            head_id=head_id,
             teanant_id=teanant_id,
             bill_info_id=bill_info_id,
             collect_id=collect_id,
