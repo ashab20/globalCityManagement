@@ -723,7 +723,7 @@ class CreateBillCollectionView(Frame):
                             session,
                             crHeadId,
                             shop_allocation.renter_profile_id,
-                            collection.id, None, 
+                            None, collection.id, 
                             collection.trans_date, 
                             pay_now, "cr", 
                             teant_amount, 

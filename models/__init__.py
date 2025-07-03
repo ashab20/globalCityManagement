@@ -21,7 +21,7 @@ from .category import Category
 from .product import Product
 from .product_purchase import ProductPurchase
 from .purchase_details import PurchaseDetails
-from .deman_product import DemandProduct
+from .demand_product import DemandProduct
 from .demand_details import DemandDetails
 from .acc_head_of_accounts import AccHeadOfAccounts
 

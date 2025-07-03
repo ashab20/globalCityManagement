@@ -110,7 +110,7 @@ class ListShopOwnerView(ttk.Frame):
                     "end",
                     values=(
                         owner.id,
-                        owner.ownner_name,
+                        owner.owner_name,
                         owner.phone,
                         owner.email,
                         owner.address,
@@ -207,7 +207,7 @@ class ListShopOwnerView(ttk.Frame):
                 return
             
             # Update owner details
-            owner_to_update.ownner_name = name
+            owner_to_update.owner_name = name
             owner_to_update.phone = phone
             owner_to_update.email = email
             owner_to_update.address = address

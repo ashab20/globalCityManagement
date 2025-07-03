@@ -6,7 +6,7 @@ class UrlSubMenu(Base):
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     top_menu_id = Column(Integer)
-    sub_menu_order = Column(String(50))
+    sub_menu_order = Column(Integer)
     sub_menu_name  = Column(String(50))
-    command_name = Column(Integer)
+    command_name = Column(String(100))
     # status = Column(Integer, default=0)

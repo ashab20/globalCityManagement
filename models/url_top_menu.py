@@ -7,4 +7,5 @@ class UrlTopMenu(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     menu_name = Column(String(50))
     menu_order = Column(Integer)
+    icon = Column(String(100), nullable=True)
     # status = Column(Integer, default=0)

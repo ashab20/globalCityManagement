@@ -49,7 +49,7 @@ class App:
         self.root.geometry("1024x768")
         self.root.place_window_center()
         
-        self.current_view = DashboardView(self.root, self.on_logout)
+        self.current_view = DashboardView(self.root, user, self.on_logout)
         self.current_view.pack(fill="both", expand=True)
     
     def on_login(self, user=None):

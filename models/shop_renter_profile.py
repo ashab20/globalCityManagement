@@ -1,6 +1,8 @@
+from models.shop_allocation import ShopAllocation
 from sqlalchemy import Column, Integer, String, DateTime, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from utils.database import Session
 from .base import Base
 
 class ShopRenterProfile(Base):
@@ -26,3 +28,9 @@ class ShopRenterProfile(Base):
 
     def __repr__(self):
         return f"<ShopRenterProfile(id={self.id}, name='{self.renter_name}', email='{self.email}')>"
+
+    @staticmethod
+    def get_tenants(session):
+        """Get all tenants."""
+        tenants = session.query(ShopRenterProfile).select_from(ShopRenterProfile).join(ShopAllocation, ShopRenterProfile.id == ShopAllocation.renter_profile_id).all()
+        return tenants  

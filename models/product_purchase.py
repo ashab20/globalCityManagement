@@ -6,6 +6,7 @@ from utils.database import Base
 class ProductPurchase(Base):
     __tablename__ = "product_purchase"
     id = Column(Integer, primary_key=True)
+    demand_id = Column(Integer, ForeignKey("demand.id"), nullable=True)
     purchase_date = Column(DateTime, nullable=True)
     purchase_no = Column(String(50), nullable=True)
     shop_id = Column(Integer, ForeignKey("shop_profile.id"), nullable=True)

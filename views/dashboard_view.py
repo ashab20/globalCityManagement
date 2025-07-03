@@ -2,7 +2,10 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 from tkinter import Menu
 from utils.window_manager import WindowManager
+from views.login_view import LoginView
 from views.accounting.shop_renter_due_report import ShopRenterDueReportView
+from views.purchase.purchase import Purchase
+from views.purchase.purchase_list import PurchaseListView
 from views.unit.create_unit import CreateUnitView
 from views.unit.unit_list import UnitListView
 from views.users.create_user_view import CreateUserView
@@ -51,6 +54,9 @@ from views.category.category_list import CategoryListView
 from views.product.create_product import CreateProductView
 from views.product.product_list import ProductListView
 from utils.toltip import ToolTip
+from views.accounting.tenant_ledger import TenantLedgerView
+from views.demand.demand_create import DemandCreateView
+from views.demand.demand_list import DemandListView
 # from sqlalchemy.orm import Session
 
 
@@ -75,47 +81,58 @@ class DashboardView(ttk.Frame):
         self.show_welcome()
 
         # Render internal menu
-        self.render_internal_menu(self.container)
+        # self.render_internal_menu(self.container)
     
     def create_menu(self):
         """Creates the main menu bar with role-based access control."""
-        # Configure menu colors
-        self.parent.option_add('*Menu.background', '#f8f9fa')
-        self.parent.option_add('*Menu.foreground', '#212529')
-        self.parent.option_add('*Menu.selectColor', '#4361ee')
-        self.parent.option_add('*Menu.activeBorderWidth', 0)
-        self.parent.option_add('*Menu.borderWidth', 0)
-        self.parent.option_add('*Menu.relief', 'flat')
-        self.parent.option_add('*Menu.activeBackground', '#e9ecef')
-        self.parent.option_add('*Menu.activeForeground', '#212529')
-        
-        menubar = Menu(self.parent)
-        self.parent.config(menu=menubar)
-        
-        # Get user role and permissions
-        user_role = self.get_user_role()
-        user_permissions = self.get_user_permissions(user_role)
-        # print(f"User role: {user_role} , Permissions: {user_permissions}")
-       
+        try:
+            # Configure menu colors
+            self.parent.option_add('*Menu.background', '#f8f9fa')
+            self.parent.option_add('*Menu.foreground', '#212529')
+            self.parent.option_add('*Menu.selectColor', '#4361ee')
+            self.parent.option_add('*Menu.activeBorderWidth', 0)
+            self.parent.option_add('*Menu.borderWidth', 0)
+            self.parent.option_add('*Menu.relief', 'flat')
+            self.parent.option_add('*Menu.activeBackground', '#e9ecef')
+            self.parent.option_add('*Menu.activeForeground', '#212529')
+            
+            menubar = Menu(self.parent)
+            self.parent.config(menu=menubar)
+            
+            # Get user role and permissions
+            user_role = self.get_user_role()
+            user_permissions = self.get_user_permissions(user_role)
+            # print(f"User role: {user_role} , Permissions: {user_permissions}")
+           
 
-    #   Dynamic Menu
-        menus = self.get_url_top_menu()
-        # print(menus)
-        for mt in menus:
-            print(mt.menu_name)
-            topMenu = Menu(menubar, tearoff=0)
-            menubar.add_cascade(label=mt.menu_name, menu=topMenu)
-            submenus = self.get_url_sub_menu(mt.id)
-            for sub in submenus:
-                try:
-                    # Convert command name to lowercase and replace spaces with underscores
-                    method_name = sub.command_name.lower().replace(' ', '_')
-                    menu_action = getattr(self, method_name)
-                    topMenu.add_command(label=sub.sub_menu_name, command=menu_action)
-                except AttributeError:
-                    print(f"Warning: Method {method_name} not found for menu item {sub.sub_menu_name}")
-                    continue
-       
+        #   Dynamic Menu
+            menus = self.get_url_top_menu()
+            print(f"Creating menu for {len(menus) if menus else 0} top menus")
+            # print(menus)
+            if menus:
+                for i, mt in enumerate(menus):
+                    print(f"Processing menu {i+1}: {mt.menu_name}")
+                    topMenu = Menu(menubar, tearoff=0)
+                    menubar.add_cascade(label=mt.menu_name, menu=topMenu)
+                    submenus = self.get_url_sub_menu(mt.id)
+                    print(f"Adding {len(submenus)} submenus to {mt.menu_name}")
+                    for sub in submenus:
+                        try:
+                            # Convert command name to lowercase and replace spaces with underscores
+                            method_name = sub.command_name.lower().replace(' ', '_')
+                            print(f"Looking for method: {method_name}")
+                            menu_action = getattr(self, method_name)
+                            topMenu.add_command(label=sub.sub_menu_name, command=menu_action)
+                            print(f"Added submenu: {sub.sub_menu_name}")
+                        except AttributeError:
+                            print(f"Warning: Method {method_name} not found for menu item {sub.sub_menu_name}")
+                            continue
+            else:
+                print("No top menus found in database")
+        except Exception as e:
+            print(f"Error creating menu: {e}")
+            import traceback
+            traceback.print_exc()
     
     def get_user_role(self):
         """
@@ -149,106 +166,136 @@ class DashboardView(ttk.Frame):
             if not role_permission:
                 # If no role permission found, use default
                 default_permissions = RolePermission.get_default_permissions()
-                permissions = default_permissions.get(role, default_permissions['User'])
+                # Convert role to lowercase for matching
+                role_lower = role.lower() if role else 'staff'
+                permissions = default_permissions.get(role_lower, default_permissions['staff'])
             else:
                 permissions = role_permission.permissions
             
             session.close()
             return permissions
         except Exception:
-            # Fallback to User permissions
+            # Fallback to staff permissions
             default_permissions = RolePermission.get_default_permissions()
-            return default_permissions['User']
+            return default_permissions['staff']
     
     def get_url_top_menu(self):
         try:
-            print("dynamic menu called")
+            print("Getting top menus...")
             session = Session()
             # top_menu = session.query(UrlTopMenu).all()
             # print(f"top menu: {top_menu}")
 
             menu_top = session.query(UrlTopMenu).order_by(UrlTopMenu.menu_order).all() 
+            print(f"Found {len(menu_top)} top menus:")
+            for menu in menu_top:
+                print(f"  - {menu.menu_name} (ID: {menu.id}, Order: {menu.menu_order})")
             session.close()
             return menu_top
             
-        except Exception:
-            print("somerhing goes worn!")
-        
+        except Exception as e:
+            print(f"Error getting top menu: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+    
     def get_url_sub_menu(self,id):
         try:
-            print("dynamic menu called")
+            print(f"Getting sub menus for top menu ID: {id}")
             session = Session()
             # top_menu = session.query(UrlTopMenu).all()
             # print(f"top menu: {top_menu}")
 
             menu_top = session.query(UrlSubMenu).filter_by(top_menu_id=id).order_by(UrlSubMenu.sub_menu_order).all()
+            print(f"Found {len(menu_top)} sub menus for top menu {id}:")
+            for submenu in menu_top:
+                print(f"  - {submenu.sub_menu_name} (Command: {submenu.command_name})")
             session.close()
             return menu_top
             
-        except Exception:
-            print("somerhing goes wrong!")
+        except Exception as e:
+            print(f"Error getting sub menu: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
     
 
-    ICON_MAP = {
-        'Users': 'users.png',
-        'Shop': 'shop.png',
-        'Reports': 'reports.png',
-        'Account': 'account.png',
-        'Help': 'help.png',
-        'Profile': 'profile.png',
-        'Utility': 'utility.png'
-        # Add more mappings as needed
-    }
 
-    def show_welcome(self):
-        """Shows welcome message and dashboard-style top menus."""
-        welcome_frame = ttk.Frame(self.container, style="TFrame")
-        welcome_frame.pack(pady=30, fill='both', expand=True)
 
-        # Show logo
-        logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'assets', 'images', 'logo.png')
-        logo_image = Image.open(logo_path).resize((300, 100), Image.Resampling.LANCZOS)
-        self.logo_photo = ImageTk.PhotoImage(logo_image)
-        
-        ttk.Label(welcome_frame, image=self.logo_photo, style="TLabel").pack(pady=(0, 20))
+    # def show_welcome(self):
+    #     """Shows welcome message and dashboard-style top menus."""
+    #     try:
+    #         welcome_frame = ttk.Frame(self.container, style="TFrame")
+    #         welcome_frame.pack(pady=30, fill='both', expand=True)
 
-        # Dashboard menu box container
-        dashboard_frame = ttk.Frame(welcome_frame)
-        dashboard_frame.pack()
+    #         # Show logo
+    #         logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+    #                                'assets', 'images', 'logo.png')
+    #         if os.path.exists(logo_path):
+    #             logo_image = Image.open(logo_path).resize((300, 100), Image.Resampling.LANCZOS)
+    #             self.logo_photo = ImageTk.PhotoImage(logo_image)
+                
+    #             ttk.Label(welcome_frame, image=self.logo_photo, style="TLabel").pack(pady=(0, 20))
 
-        try:
-            top_menus = self.get_url_top_menu()
+    #         # Dashboard menu box container
+    #         dashboard_frame = ttk.Frame(welcome_frame)
+    #         dashboard_frame.pack()
 
-            for i, mt in enumerate(top_menus):
-                # Box per top menu
-                menu_box = ttk.LabelFrame(
-                    dashboard_frame,
-                    text=mt.menu_name,
-                    padding=10,
-                    style="TLabelframe"
-                )
-                menu_box.grid(row=i // 3, column=i % 3, padx=20, pady=15, sticky="nsew")
+    #         top_menus = self.get_url_top_menu()
+    #         if top_menus:
+    #             for i, mt in enumerate(top_menus):
+    #                 # Box per top menu
+    #                 menu_box = ttk.LabelFrame(
+    #                     dashboard_frame,
+    #                     text=mt.menu_name,
+    #                     padding=10,
+    #                     style="TLabelframe"
+    #                 )
+    #                 menu_box.grid(row=i // 3, column=i % 3, padx=20, pady=15, sticky="nsew")
 
-                # Try to load icon for menu (optional)
-                icon_path = os.path.join('assets', 'icons', mt.icon or '')
-                if os.path.exists(icon_path):
-                    icon_image = Image.open(icon_path).resize((40, 40), Image.Resampling.LANCZOS)
-                    icon_photo = ImageTk.PhotoImage(icon_image)
-                    icon_label = ttk.Label(menu_box, image=icon_photo)
-                    icon_label.image = icon_photo  # keep a reference
-                    icon_label.pack(pady=(0, 5))
+    #                 # Try to load icon for menu (optional)
+    #                 icon_path = os.path.join('assets', 'icons', mt.icon or '')
+    #                 if os.path.exists(icon_path):
+    #                     icon_image = Image.open(icon_path).resize((40, 40), Image.Resampling.LANCZOS)
+    #                     icon_photo = ImageTk.PhotoImage(icon_image)
+    #                     icon_label = ttk.Label(menu_box, image=icon_photo)
+    #                     icon_label.image = icon_photo  # keep a reference
+    #                     icon_label.pack(pady=(0, 5))
 
-                # Submenus as buttons
-                submenus = self.get_url_sub_menu(mt.id)
-                for sub in submenus:
-                    try:
-                        method_name = sub.command_name.lower().replace(' ', '_')
-                        menu_action = getattr(self, method_name)
-                        ttk.Button(menu_box, text=sub.sub_menu_name, command=menu_action).pack(pady=2, fill='x')
-                    except AttributeError:
-                        print(f"Method {method_name} not found for submenu {sub.sub_menu_name}")
-        except Exception as e:
-            print(f"Failed to show dashboard menus: {e}")
+    #                 # Submenus as buttons
+    #                 submenus = self.get_url_sub_menu(mt.id)
+    #                 for sub in submenus:
+    #                     try:
+    #                         method_name = sub.command_name.lower().replace(' ', '_')
+    #                         menu_action = getattr(self, method_name)
+    #                         ttk.Button(
+    #                             menu_box, 
+    #                             text=sub.sub_menu_name, 
+    #                             command=menu_action,
+    #                             width=20
+    #                         ).pack(pady=2, fill='x')
+    #                     except AttributeError:
+    #                         print(f"Method {method_name} not found for submenu {sub.sub_menu_name}")
+    #         else:
+    #             # Show a simple welcome message if no menus are available
+    #             ttk.Label(
+    #                 welcome_frame,
+    #                 text="Welcome to Global City Management System",
+    #                 font=("Helvetica", 16, "bold"),
+    #                 bootstyle="primary"
+    #             ).pack(pady=20)
+                
+    #             ttk.Label(
+    #                 welcome_frame,
+    #                 text="Use the menu above to navigate the system",
+    #                 font=("Helvetica", 12),
+    #                 bootstyle="secondary"
+    #             ).pack()
+                
+    #     except Exception as e:
+    #         print(f"Failed to show dashboard menus: {e}")
+    #         import traceback
+    #         traceback.print_exc()
 
 
     # def show_welcome(self):
@@ -438,11 +485,11 @@ class DashboardView(ttk.Frame):
 
     def demand_product(self):
         """Opens Demand Product window."""
-        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+        self.window_manager.create_window("Demand Product", DemandCreateView)
 
     def demand_product_list(self):
         """Opens Demand Product List window."""
-        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+        self.window_manager.create_window("Demand Product List", DemandListView)
 
     def create_unit(self):
         """Opens Create Unit window."""
@@ -454,11 +501,11 @@ class DashboardView(ttk.Frame):
 
     def product_purchase(self):
         """Opens Product Purchase window."""
-        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+        self.window_manager.create_window("Purchase View", Purchase)
 
     def product_purchase_list(self):
         """Opens Product Purchase List window."""
-        # self.window_manager.create_window("List Bill Info", BillInfoListView)
+        self.window_manager.create_window("Purchase List", PurchaseListView)
 
     def product_issues(self):
         """Opens Product Issues window."""
@@ -467,6 +514,8 @@ class DashboardView(ttk.Frame):
     def product_issues_list(self):
         """Opens Product Issues List window."""
         # self.window_manager.create_window("List Bill Info", BillInfoListView)
+
+
     
     
     
@@ -513,7 +562,10 @@ class DashboardView(ttk.Frame):
         """Opens bill collection window."""
         self.window_manager.create_window("Bill Collection List", CollectionListView)
     
-
+    def tenant_ledger(self):
+        """Opens tenant ledger window."""
+        self.window_manager.create_window("Tenant Ledger", TenantLedgerView)
+    
     # *MENU FUNTIONS END
 
     def dynamicMenu(self):
@@ -527,7 +579,7 @@ class DashboardView(ttk.Frame):
     # Enhanced icon handling
     ICON_MAP = {
         'Users': '👤',
-        'Shop': '🏪',
+        'Shop Management': '🏪',
         'Reports': '📊',
         'Account': '💰',
         'Help': '❓',
@@ -535,8 +587,8 @@ class DashboardView(ttk.Frame):
         'Utility': '⚙️',
         'User Management': '👥',
         'Shop Management': '🏬',
-        'Accounting': '📈',
-        'Billing': '🧾',
+        'Account Management': '📈',
+        'Bills and Utility Settings': '🧾',
         'Inventory': '📦',
         'Settings': '⚙️',
         'Logout': '🚪'
@@ -547,27 +599,19 @@ class DashboardView(ttk.Frame):
         Renders icon-only internal menu at the top of the window.
         """
         try:
-            top_menus = self.get_url_top_menu()
-            
+            # top_menus = self.get_url_top_menu()
+            session = Session()
+            top_menus = session.query(UrlTopMenu).order_by(UrlTopMenu.menu_order).all() 
+            print(f"Found Top {len(top_menus)} top menus:")
+            session.close()
             # Create dedicated menu bar frame
             menu_bar = ttk.Frame(parent_frame, height=40, style="Primary.TFrame")
-            menu_bar.pack(fill="x", pady=(0, 10))
+            menu_bar.pack(fill="x", pady=(0, 5))
             menu_bar.pack_propagate(False)  # Keep fixed height
-            
-            # Add application logo on left
-            logo_frame = ttk.Frame(menu_bar, width=150)
-            logo_frame.pack(side="left", fill="y")
-            
-            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
-                                   'assets', 'images', 'logo.png')
-            if os.path.exists(logo_path):
-                logo_img = Image.open(logo_path).resize((120, 30), Image.Resampling.LANCZOS)
-                self.logo = ImageTk.PhotoImage(logo_img)
-                ttk.Label(logo_frame, image=self.logo).pack(padx=10, pady=5)
             
             # Menu container
             menu_container = ttk.Frame(menu_bar)
-            menu_container.pack(side="left", fill="both", expand=True, padx=20)
+            menu_container.pack(side="left", fill="both", expand=True, padx=10)
             
             for mt in top_menus:
                 # Get icon from mapping or use default
@@ -577,9 +621,9 @@ class DashboardView(ttk.Frame):
                 btn = ttk.Button(
                     menu_container,
                     text=icon_char,
-                    command=lambda m=mt: self.open_first_submenu(m),
+                    command=lambda m=mt: self.show_submenu_dropdown(m),
                     width=3,
-                    bootstyle="light-outline"
+                    bootstyle="primary"
                 )
                 btn.pack(side="left", padx=5)
                 ToolTip(btn, text=mt.menu_name, delay=500)
@@ -598,17 +642,105 @@ class DashboardView(ttk.Frame):
         except Exception as e:
             print(f"Error rendering internal menu: {e}")
     
-    def open_first_submenu(self, top_menu):
+    def show_submenu_dropdown(self, top_menu):
+        """Shows a dropdown menu with submenu options when a top menu is clicked"""
+        # Create popup menu
+        menu = Menu(self.parent, tearoff=0)
+        
+        # Get submenus for this top menu
         submenus = self.get_url_sub_menu(top_menu.id)
-        if not submenus:
-            return
-
-        first_sub = submenus[0]
+        
+        # Add each submenu as a menu item
+        for sub in submenus:
+            try:
+                method_name = sub.command_name.lower().replace(' ', '_')
+                menu_action = getattr(self, method_name)
+                menu.add_command(
+                    label=sub.sub_menu_name, 
+                    command=menu_action
+                )
+            except AttributeError:
+                print(f"Method {method_name} not found for submenu {sub.sub_menu_name}")
+        
+        # Show the menu at the current mouse position
+        menu.tk_popup(self.winfo_pointerx(), self.winfo_pointery())
+        
+        # Bind to close menu when clicking elsewhere
+        menu.bind("<FocusOut>", lambda e: menu.destroy())
+    
+    def show_welcome(self):
+        """Shows welcome message and dashboard-style top menus."""
         try:
-            method_name = first_sub.command_name.lower().replace(' ', '_')
-            menu_action = getattr(self, method_name)
-            menu_action()
-        except AttributeError:
-            print(f"No method: {method_name}")
+            welcome_frame = ttk.Frame(self.container, style="TFrame")
+            welcome_frame.pack(pady=30, fill='both', expand=True)
+
+            # Show logo
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+                                   'assets', 'images', 'logo.png')
+            if os.path.exists(logo_path):
+                logo_image = Image.open(logo_path).resize((300, 100), Image.Resampling.LANCZOS)
+                self.logo_photo = ImageTk.PhotoImage(logo_image)
+                
+                ttk.Label(welcome_frame, image=self.logo_photo, style="TLabel").pack(pady=(0, 20))
+
+            # Dashboard menu box container
+            dashboard_frame = ttk.Frame(welcome_frame)
+            dashboard_frame.pack()
+
+            top_menus = self.get_url_top_menu()
+            if top_menus:
+                for i, mt in enumerate(top_menus):
+                    # Box per top menu
+                    menu_box = ttk.LabelFrame(
+                        dashboard_frame,
+                        text=mt.menu_name,
+                        padding=10,
+                        style="TLabelframe"
+                    )
+                    menu_box.grid(row=i // 3, column=i % 3, padx=20, pady=15, sticky="nsew")
+
+                    # Try to load icon for menu (optional)
+                    icon_path = os.path.join('assets', 'icons', mt.icon or '')
+                    if os.path.exists(icon_path):
+                        icon_image = Image.open(icon_path).resize((40, 40), Image.Resampling.LANCZOS)
+                        icon_photo = ImageTk.PhotoImage(icon_image)
+                        icon_label = ttk.Label(menu_box, image=icon_photo)
+                        icon_label.image = icon_photo  # keep a reference
+                        icon_label.pack(pady=(0, 5))
+
+                    # Submenus as buttons
+                    submenus = self.get_url_sub_menu(mt.id)
+                    for sub in submenus:
+                        try:
+                            method_name = sub.command_name.lower().replace(' ', '_')
+                            menu_action = getattr(self, method_name)
+                            ttk.Button(
+                                menu_box, 
+                                text=sub.sub_menu_name, 
+                                command=menu_action,
+                                width=20
+                            ).pack(pady=2, fill='x')
+                        except AttributeError:
+                            print(f"Method {method_name} not found for submenu {sub.sub_menu_name}")
+            else:
+                # Show a simple welcome message if no menus are available
+                ttk.Label(
+                    welcome_frame,
+                    text="Welcome to Global City Management System",
+                    font=("Helvetica", 16, "bold"),
+                    bootstyle="primary"
+                ).pack(pady=20)
+                
+                ttk.Label(
+                    welcome_frame,
+                    text="Use the menu above to navigate the system",
+                    font=("Helvetica", 12),
+                    bootstyle="secondary"
+                ).pack()
+                
+        except Exception as e:
+            print(f"Failed to show dashboard menus: {e}")
+            import traceback
+            traceback.print_exc()
 
 
